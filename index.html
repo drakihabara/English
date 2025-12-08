@@ -18,6 +18,7 @@
             justify-content: center;
             height: 100vh;
             overflow: hidden;
+            position: relative; /* リセットボタン配置のため */
         }
 
         #card-container {
@@ -90,6 +91,7 @@
         .status-like { right: 20px; color: #2ecc71; border-color: #2ecc71; transform: rotate(15deg); }
         .status-nope { left: 20px; color: #e74c3c; border-color: #e74c3c; transform: rotate(-15deg); }
 
+        /* ▼ 終了画面のスタイル */
         #finish-screen {
             display: none;
             flex-direction: column;
@@ -99,18 +101,42 @@
             width: 100%;
         }
 
+        /* コンプリートの文字 */
+        #finish-screen h2 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+        }
+
         .btn {
             background: #3498db;
             color: white;
-            padding: 15px 30px;
+            padding: 15px 40px;
             border-radius: 30px;
             text-decoration: none;
             font-weight: bold;
-            margin-top: 20px;
+            font-size: 18px;
             cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+            transition: transform 0.1s;
         }
         .btn:active { transform: scale(0.98); }
+
+        /* ▼ リセットボタン（右下隅へ移動） */
+        .reset-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 12px;
+            color: #bbb;
+            background: none;
+            border: 1px solid #ddd;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100; /* 最前面に */
+        }
     </style>
 </head>
 <body>
@@ -118,15 +144,15 @@
     <div id="card-container"></div>
 
     <div id="finish-screen">
-        <h2>コンプリート！</h2>
-        <p>今日やるべき単語は終わりました</p>
-        <div class="btn" onclick="location.reload()">次のセットを確認</div>
-        <div class="btn" onclick="resetData()" style="background:#999; font-size:12px; margin-top:40px;">データをリセット</div>
+        <h2>コンプリート</h2>
+        <div class="btn" onclick="location.reload()">次のセット</div>
     </div>
+    
+    <div class="reset-btn" onclick="resetData()">学習リセット</div>
 
 <script>
     let currentStack = [];
-    let failedInSession = {}; // 今回のセッションで「左」にした単語を記録
+    let failedInSession = {}; 
     let cardContainer = document.getElementById('card-container');
     
     window.onload = function() {
@@ -142,33 +168,23 @@
         const log = logStr ? JSON.parse(logStr) : {};
         const now = new Date();
 
-        // 【変更】復習日(next_review)が今日以前のものを抽出
         currentStack = ALL_DATA.filter(word => {
             const record = log[word.id];
-            
-            // 記録がない（未学習）なら対象
             if (!record) return true;
-
-            // 次回予定日をチェック
             if (record.next_review) {
                 const reviewDate = new Date(record.next_review);
-                // 今日より前なら対象
                 return reviewDate <= now;
             }
-            return true; // 念のため
+            return true;
         }).sort((a, b) => {
-            // 未学習(logなし)を優先的に出すなどの調整も可能ですが、
-            // ここでは単純にID順などで出します
             return a.id - b.id;
         });
 
-        // 1回あたりの枚数制限（10枚ずつ）
         if(currentStack.length > 10) currentStack = currentStack.slice(0, 10);
 
         if (currentStack.length === 0) {
             showFinish();
         } else {
-            // セッション開始時に失敗記録をリセット
             failedInSession = {}; 
             renderCard();
         }
@@ -225,51 +241,34 @@
         });
     }
 
-    // ■ 分散学習ロジックの核心部分
     function processSwipe(id, direction) {
         const currentCard = currentStack[0];
-        currentStack.shift(); // 一旦削除
+        currentStack.shift(); 
 
         if (direction === 'left') {
-            // 左（まだ）：ゾンビ復活
             console.log("失敗: " + currentCard.en);
-            
-            // このセッションで失敗したことを記録
             failedInSession[id] = true;
-            
-            // 配列の最後に復活
-            currentStack.push(currentCard);
-            
-            // ※「まだ」の場合はログ保存しない（どうせ今日中にまたやるから）
-            
+            currentStack.push(currentCard); // ゾンビ復活
         } else {
-            // 右（覚えた）：次回予定日を計算して保存
             console.log("成功: " + currentCard.en);
-            
             const now = new Date();
             let addedDays = 0;
 
             if (failedInSession[id]) {
-                // 今回1回でも間違えた → 2日後 (翌々日)
-                addedDays = 2;
-                console.log("→ 苦戦したので2日後");
+                addedDays = 2; // 苦戦: 2日後
             } else {
-                // ストレート勝ち → 7日後 (1週間後)
-                addedDays = 7;
-                console.log("→ 一発クリアなので1週間後");
+                addedDays = 7; // 一発: 1週間後
             }
 
-            // 日付を加算
             now.setDate(now.getDate() + addedDays);
             
-            // ログ保存
             const logStr = localStorage.getItem('eiken3_log');
             let log = logStr ? JSON.parse(logStr) : {};
             
             log[id] = { 
-                status: 2, // 完了扱い
-                last_review: new Date().toISOString(), // 最後にやった日
-                next_review: now.toISOString() // 次にやるべき日
+                status: 2,
+                last_review: new Date().toISOString(),
+                next_review: now.toISOString()
             };
             localStorage.setItem('eiken3_log', JSON.stringify(log));
         }
@@ -280,6 +279,7 @@
     function showFinish() {
         cardContainer.style.display = 'none';
         document.getElementById('finish-screen').style.display = 'flex';
+        // リセットボタンはbody直下にあるので、ここでは何もしなくてOK
     }
 
     function resetData() {
