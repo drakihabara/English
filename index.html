@@ -90,7 +90,6 @@
         .status-like { right: 20px; color: #2ecc71; border-color: #2ecc71; transform: rotate(15deg); }
         .status-nope { left: 20px; color: #e74c3c; border-color: #e74c3c; transform: rotate(-15deg); }
 
-        /* ▼ 終了画面のスタイル変更 */
         #finish-screen {
             display: none;
             flex-direction: column;
@@ -98,40 +97,7 @@
             justify-content: center;
             height: 100%;
             width: 100%;
-            padding: 20px;
-            box-sizing: border-box;
         }
-
-        #finish-title {
-            margin: 0 0 10px 0;
-            color: #333;
-        }
-
-        /* 苦手リストの表示エリア */
-        #review-list {
-            width: 100%;
-            max-width: 320px;
-            max-height: 50vh; /* 画面の半分くらいの高さまで */
-            overflow-y: auto; /* スクロール可能に */
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 20px;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
-        }
-
-        .review-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            font-size: 16px;
-        }
-        .review-item:last-child { border-bottom: none; }
-        .review-item .en { font-weight: bold; color: #333; }
-        .review-item .ja { color: #e74c3c; font-size: 14px; }
-        .empty-msg { text-align: center; color: #888; padding: 20px; }
 
         .btn {
             background: #3498db;
@@ -140,6 +106,7 @@
             border-radius: 30px;
             text-decoration: none;
             font-weight: bold;
+            margin-top: 20px;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
@@ -151,12 +118,10 @@
     <div id="card-container"></div>
 
     <div id="finish-screen">
-        <h2 id="finish-title">苦手リスト</h2>
-        
-        <div id="review-list"></div>
-
-        <div class="btn" onclick="location.reload()">もう一度やる</div>
-        <div class="btn" onclick="resetData()" style="background:#999; font-size:12px; margin-top:20px;">データをリセット</div>
+        <h2>コンプリート！</h2>
+        <p>このセットは完璧です</p>
+        <div class="btn" onclick="location.reload()">次のセットをやる</div>
+        <div class="btn" onclick="resetData()" style="background:#999; font-size:12px; margin-top:40px;">データをリセット</div>
     </div>
 
 <script>
@@ -184,6 +149,7 @@
             return statusB - statusA;
         });
 
+        // 1回あたりの枚数制限（ゾンビモードなので少なめ推奨）
         if(currentStack.length > 10) currentStack = currentStack.slice(0, 10);
 
         if (currentStack.length === 0) {
@@ -244,46 +210,30 @@
         });
     }
 
+    // ■ ゾンビモードの核となる処理
     function processSwipe(id, status) {
+        // ログ保存
         const logStr = localStorage.getItem('eiken3_log');
         let log = logStr ? JSON.parse(logStr) : {};
         log[id] = { status: status, date: new Date().toISOString() };
         localStorage.setItem('eiken3_log', JSON.stringify(log));
 
+        // 現在のカードを退避
+        const currentCard = currentStack[0];
         currentStack.shift(); 
+
+        // 左（まだ）の場合、配列の最後に復活させる
+        if (status === 1) {
+            currentStack.push(currentCard);
+        }
+
         renderCard();
     }
 
-    // ▼ 終了画面のロジック変更
     function showFinish() {
         cardContainer.style.display = 'none';
+        // コンプリートしたので、特別なリスト表示などは不要
         document.getElementById('finish-screen').style.display = 'flex';
-
-        // ログを取得して「まだ(status:1)」の単語を抽出
-        const logStr = localStorage.getItem('eiken3_log');
-        const log = logStr ? JSON.parse(logStr) : {};
-        
-        const nopeWords = ALL_DATA.filter(word => {
-            return log[word.id] && log[word.id].status === 1;
-        });
-
-        const listContainer = document.getElementById('review-list');
-        listContainer.innerHTML = ''; // クリア
-
-        if (nopeWords.length === 0) {
-            // 全て完了している場合
-            document.getElementById('finish-title').innerText = "すべて完了";
-            listContainer.innerHTML = '<div class="empty-msg">苦手な単語はありません</div>';
-        } else {
-            // 苦手リストがある場合
-            document.getElementById('finish-title').innerText = "苦手リスト";
-            nopeWords.forEach(word => {
-                const item = document.createElement('div');
-                item.className = 'review-item';
-                item.innerHTML = `<span class="en">${word.en}</span> <span class="ja">${word.ja}</span>`;
-                listContainer.appendChild(item);
-            });
-        }
     }
 
     function resetData() {
