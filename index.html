@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>単語特訓</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-    
     <script src="words.js"></script>
 
     <style>
@@ -16,18 +15,15 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* 上下中央揃えに変更 */
+            justify-content: center;
             height: 100vh;
             overflow: hidden;
         }
-        
-        /* headerタグのスタイルは削除しました */
 
         #card-container {
             position: relative;
             width: 300px;
             height: 450px;
-            /* margin-topを削除し、中央配置にします */
         }
 
         .card {
@@ -80,7 +76,6 @@
             color: #ccc;
         }
 
-        /* スワイプ中のステータスラベル */
         .status-label {
             position: absolute;
             top: 20px;
@@ -95,7 +90,7 @@
         .status-like { right: 20px; color: #2ecc71; border-color: #2ecc71; transform: rotate(15deg); }
         .status-nope { left: 20px; color: #e74c3c; border-color: #e74c3c; transform: rotate(-15deg); }
 
-        /* 完了画面 */
+        /* ▼ 終了画面のスタイル変更 */
         #finish-screen {
             display: none;
             flex-direction: column;
@@ -103,7 +98,41 @@
             justify-content: center;
             height: 100%;
             width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
         }
+
+        #finish-title {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        /* 苦手リストの表示エリア */
+        #review-list {
+            width: 100%;
+            max-width: 320px;
+            max-height: 50vh; /* 画面の半分くらいの高さまで */
+            overflow-y: auto; /* スクロール可能に */
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        .review-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 16px;
+        }
+        .review-item:last-child { border-bottom: none; }
+        .review-item .en { font-weight: bold; color: #333; }
+        .review-item .ja { color: #e74c3c; font-size: 14px; }
+        .empty-msg { text-align: center; color: #888; padding: 20px; }
+
         .btn {
             background: #3498db;
             color: white;
@@ -111,24 +140,23 @@
             border-radius: 30px;
             text-decoration: none;
             font-weight: bold;
-            margin-top: 20px;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        .btn:active {
-            transform: scale(0.98);
-        }
+        .btn:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
-    <div id="card-container">
-        </div>
+    <div id="card-container"></div>
 
     <div id="finish-screen">
-        <h2>お疲れ様でした</h2> <p>今日の学習分は終了です</p>
+        <h2 id="finish-title">苦手リスト</h2>
+        
+        <div id="review-list"></div>
+
         <div class="btn" onclick="location.reload()">もう一度やる</div>
-        <div class="btn" onclick="resetData()" style="background:#999; font-size:12px; margin-top:40px;">データをリセット</div>
+        <div class="btn" onclick="resetData()" style="background:#999; font-size:12px; margin-top:20px;">データをリセット</div>
     </div>
 
 <script>
@@ -173,7 +201,6 @@
         }
 
         const word = currentStack[0];
-        
         const el = document.createElement('div');
         el.className = 'card';
         el.innerHTML = `
@@ -181,15 +208,13 @@
             <div class="status-label status-nope">まだ</div>
             <div class="en-text">${word.en}</div>
             <div class="cat-text">[${word.cat}]</div>
-            <div class="ja-area">
-                <div class="hint-text">タップして意味を表示</div>
-            </div>
+            <div class="ja-area"><div class="hint-text">タップして意味を表示</div></div>
         `;
 
         cardContainer.appendChild(el);
 
         let isRevealed = false;
-        el.addEventListener('click', (e) => {
+        el.addEventListener('click', () => {
             if(!isRevealed) {
                 el.querySelector('.ja-area').innerHTML = `<div class="ja-text">${word.ja}</div>`;
                 isRevealed = true;
@@ -197,25 +222,21 @@
         });
 
         const hammer = new Hammer(el);
-        hammer.on('pan', (event) => {
-            el.style.transform = `translateX(${event.deltaX}px) rotate(${event.deltaX * 0.05}deg)`;
-            
-            if (event.deltaX > 0) {
-                el.querySelector('.status-like').style.opacity = event.deltaX / 100;
+        hammer.on('pan', (e) => {
+            el.style.transform = `translateX(${e.deltaX}px) rotate(${e.deltaX * 0.05}deg)`;
+            if (e.deltaX > 0) {
+                el.querySelector('.status-like').style.opacity = e.deltaX / 100;
                 el.querySelector('.status-nope').style.opacity = 0;
             } else {
-                el.querySelector('.status-nope').style.opacity = Math.abs(event.deltaX) / 100;
+                el.querySelector('.status-nope').style.opacity = Math.abs(e.deltaX) / 100;
                 el.querySelector('.status-like').style.opacity = 0;
             }
         });
 
-        hammer.on('panend', (event) => {
-            const threshold = 100;
-            if (event.deltaX > threshold) {
-                processSwipe(word.id, 2);
-            } else if (event.deltaX < -threshold) {
-                processSwipe(word.id, 1);
-            } else {
+        hammer.on('panend', (e) => {
+            if (e.deltaX > 100) processSwipe(word.id, 2);
+            else if (e.deltaX < -100) processSwipe(word.id, 1);
+            else {
                 el.style.transform = '';
                 el.querySelector('.status-like').style.opacity = 0;
                 el.querySelector('.status-nope').style.opacity = 0;
@@ -226,7 +247,6 @@
     function processSwipe(id, status) {
         const logStr = localStorage.getItem('eiken3_log');
         let log = logStr ? JSON.parse(logStr) : {};
-        
         log[id] = { status: status, date: new Date().toISOString() };
         localStorage.setItem('eiken3_log', JSON.stringify(log));
 
@@ -234,9 +254,36 @@
         renderCard();
     }
 
+    // ▼ 終了画面のロジック変更
     function showFinish() {
         cardContainer.style.display = 'none';
         document.getElementById('finish-screen').style.display = 'flex';
+
+        // ログを取得して「まだ(status:1)」の単語を抽出
+        const logStr = localStorage.getItem('eiken3_log');
+        const log = logStr ? JSON.parse(logStr) : {};
+        
+        const nopeWords = ALL_DATA.filter(word => {
+            return log[word.id] && log[word.id].status === 1;
+        });
+
+        const listContainer = document.getElementById('review-list');
+        listContainer.innerHTML = ''; // クリア
+
+        if (nopeWords.length === 0) {
+            // 全て完了している場合
+            document.getElementById('finish-title').innerText = "すべて完了";
+            listContainer.innerHTML = '<div class="empty-msg">苦手な単語はありません</div>';
+        } else {
+            // 苦手リストがある場合
+            document.getElementById('finish-title').innerText = "苦手リスト";
+            nopeWords.forEach(word => {
+                const item = document.createElement('div');
+                item.className = 'review-item';
+                item.innerHTML = `<span class="en">${word.en}</span> <span class="ja">${word.ja}</span>`;
+                listContainer.appendChild(item);
+            });
+        }
     }
 
     function resetData() {
