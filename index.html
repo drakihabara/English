@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>英検3級 単語特訓</title>
+    <title>単語特訓</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     
     <script src="words.js"></script>
@@ -16,21 +16,18 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center; /* 上下中央揃えに変更 */
             height: 100vh;
-            overflow: hidden; /* 画面全体のスクロールを禁止 */
+            overflow: hidden;
         }
         
-        header {
-            margin-top: 20px;
-            font-weight: bold;
-            color: #555;
-        }
+        /* headerタグのスタイルは削除しました */
 
         #card-container {
             position: relative;
-            width: 300px; /* カードの幅 */
-            height: 450px; /* カードの高さ */
-            margin-top: 40px;
+            width: 300px;
+            height: 450px;
+            /* margin-topを削除し、中央配置にします */
         }
 
         .card {
@@ -56,7 +53,7 @@
             color: #333;
             margin-bottom: 10px;
             padding: 0 10px;
-            word-break: break-all; /* 長すぎる単語の折り返し */
+            word-break: break-all;
         }
 
         .cat-text {
@@ -125,52 +122,40 @@
 </head>
 <body>
 
-    <header>英検3級 単語特訓 Web</header>
-
     <div id="card-container">
         </div>
 
     <div id="finish-screen">
-        <h2>お疲れ様でした！🎉</h2>
-        <p>今日の学習分は終了です</p>
+        <h2>お疲れ様でした</h2> <p>今日の学習分は終了です</p>
         <div class="btn" onclick="location.reload()">もう一度やる</div>
         <div class="btn" onclick="resetData()" style="background:#999; font-size:12px; margin-top:40px;">データをリセット</div>
     </div>
 
 <script>
-    // データ変数 ALL_DATA は words.js 側で定義されているため、ここでは宣言しません。
-
-    let currentStack = []; // 学習用スタック
+    let currentStack = [];
     let cardContainer = document.getElementById('card-container');
     
-    // ■ 起動時の処理
     window.onload = function() {
-        // words.js が正しく読み込めていない場合のエラーハンドリング
         if (typeof ALL_DATA === 'undefined') {
-            alert('エラー: words.js が見つかりません。index.htmlと同じ場所に置いてください。');
+            alert('エラー: words.js が見つかりません。');
             return;
         }
         loadProgress();
     };
 
-    // ■ データの読み込みと準備
     function loadProgress() {
         const logStr = localStorage.getItem('eiken3_log');
         const log = logStr ? JSON.parse(logStr) : {};
 
-        // 優先度順に並べる: 1(苦手) > 0(未) > 2(完了)は除外
         currentStack = ALL_DATA.filter(word => {
             const status = log[word.id] ? log[word.id].status : 0;
-            return status !== 2; // 「覚えた(2)」以外を対象にする
+            return status !== 2;
         }).sort((a, b) => {
             const statusA = log[a.id] ? log[a.id].status : 0;
             const statusB = log[b.id] ? log[b.id].status : 0;
-            // 降順ソート: 1(苦手) を 0(未学習) より先にする
             return statusB - statusA;
         });
 
-        // 1回あたりの枚数制限（例：最大10枚）
-        // ※もっとやりたい場合はここを 20 とかに変えてください
         if(currentStack.length > 10) currentStack = currentStack.slice(0, 10);
 
         if (currentStack.length === 0) {
@@ -180,9 +165,8 @@
         }
     }
 
-    // ■ カードの描画
     function renderCard() {
-        cardContainer.innerHTML = ''; // 画面クリア
+        cardContainer.innerHTML = '';
         if (currentStack.length === 0) {
             showFinish();
             return;
@@ -190,12 +174,11 @@
 
         const word = currentStack[0];
         
-        // カード要素を作成
         const el = document.createElement('div');
         el.className = 'card';
         el.innerHTML = `
-            <div class="status-label status-like">覚えた！</div>
-            <div class="status-label status-nope">まだ...</div>
+            <div class="status-label status-like">覚えた</div>
+            <div class="status-label status-nope">まだ</div>
             <div class="en-text">${word.en}</div>
             <div class="cat-text">[${word.cat}]</div>
             <div class="ja-area">
@@ -205,9 +188,7 @@
 
         cardContainer.appendChild(el);
 
-        // タップ処理
         let isRevealed = false;
-        // Hammer.jsと競合しないよう、クリックイベントで判定
         el.addEventListener('click', (e) => {
             if(!isRevealed) {
                 el.querySelector('.ja-area').innerHTML = `<div class="ja-text">${word.ja}</div>`;
@@ -215,15 +196,10 @@
             }
         });
 
-        // スワイプ設定 (Hammer.js)
         const hammer = new Hammer(el);
-        
-        // スワイプ中
         hammer.on('pan', (event) => {
-            // カードを動かす
             el.style.transform = `translateX(${event.deltaX}px) rotate(${event.deltaX * 0.05}deg)`;
             
-            // ラベルの透明度を変える
             if (event.deltaX > 0) {
                 el.querySelector('.status-like').style.opacity = event.deltaX / 100;
                 el.querySelector('.status-nope').style.opacity = 0;
@@ -233,15 +209,13 @@
             }
         });
 
-        // スワイプ終了時
         hammer.on('panend', (event) => {
-            const threshold = 100; // このピクセル以上動かしたら決定
+            const threshold = 100;
             if (event.deltaX > threshold) {
-                processSwipe(word.id, 2); // 右へ（完了）
+                processSwipe(word.id, 2);
             } else if (event.deltaX < -threshold) {
-                processSwipe(word.id, 1); // 左へ（苦手）
+                processSwipe(word.id, 1);
             } else {
-                // 元に戻る
                 el.style.transform = '';
                 el.querySelector('.status-like').style.opacity = 0;
                 el.querySelector('.status-nope').style.opacity = 0;
@@ -249,27 +223,22 @@
         });
     }
 
-    // ■ スワイプ決定後のデータ処理
     function processSwipe(id, status) {
-        // ログ保存
         const logStr = localStorage.getItem('eiken3_log');
         let log = logStr ? JSON.parse(logStr) : {};
         
         log[id] = { status: status, date: new Date().toISOString() };
         localStorage.setItem('eiken3_log', JSON.stringify(log));
 
-        // 次のカードへ
         currentStack.shift(); 
         renderCard();
     }
 
-    // ■ 終了画面表示
     function showFinish() {
         cardContainer.style.display = 'none';
         document.getElementById('finish-screen').style.display = 'flex';
     }
 
-    // ■ データリセット機能
     function resetData() {
         if(confirm('学習記録を全てリセットして、最初からやり直しますか？')) {
             localStorage.removeItem('eiken3_log');
