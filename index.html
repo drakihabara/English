@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>英検3級 単語特訓</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    
+    <script src="words.js"></script>
+
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -25,8 +28,8 @@
 
         #card-container {
             position: relative;
-            width: 300px;
-            height: 450px;
+            width: 300px; /* カードの幅 */
+            height: 450px; /* カードの高さ */
             margin-top: 40px;
         }
 
@@ -44,7 +47,7 @@
             text-align: center;
             transition: transform 0.3s ease;
             cursor: pointer;
-            user-select: none; /* 文字選択を防止 */
+            user-select: none;
         }
 
         .en-text {
@@ -52,6 +55,8 @@
             font-weight: bold;
             color: #333;
             margin-bottom: 10px;
+            padding: 0 10px;
+            word-break: break-all; /* 長すぎる単語の折り返し */
         }
 
         .cat-text {
@@ -64,7 +69,13 @@
             font-size: 28px;
             font-weight: bold;
             color: #e74c3c;
-            min-height: 40px; /* ガタつき防止 */
+        }
+
+        .ja-area {
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .hint-text {
@@ -72,7 +83,7 @@
             color: #ccc;
         }
 
-        /* スワイプ中のステータス表示 */
+        /* スワイプ中のステータスラベル */
         .status-label {
             position: absolute;
             top: 20px;
@@ -81,11 +92,11 @@
             padding: 5px 10px;
             border: 4px solid;
             border-radius: 8px;
-            opacity: 0; /* 最初は隠す */
-            transform: rotate(-15deg);
+            opacity: 0; 
+            z-index: 10;
         }
-        .status-like { right: 20px; color: #2ecc71; border-color: #2ecc71; transform: rotate(15deg); } /* 覚えた */
-        .status-nope { left: 20px; color: #e74c3c; border-color: #e74c3c; transform: rotate(-15deg); } /* まだ */
+        .status-like { right: 20px; color: #2ecc71; border-color: #2ecc71; transform: rotate(15deg); }
+        .status-nope { left: 20px; color: #e74c3c; border-color: #e74c3c; transform: rotate(-15deg); }
 
         /* 完了画面 */
         #finish-screen {
@@ -94,6 +105,7 @@
             align-items: center;
             justify-content: center;
             height: 100%;
+            width: 100%;
         }
         .btn {
             background: #3498db;
@@ -104,6 +116,10 @@
             font-weight: bold;
             margin-top: 20px;
             cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .btn:active {
+            transform: scale(0.98);
         }
     </style>
 </head>
@@ -116,33 +132,24 @@
 
     <div id="finish-screen">
         <h2>お疲れ様でした！🎉</h2>
-        <p>今日の分は終わりです</p>
+        <p>今日の学習分は終了です</p>
         <div class="btn" onclick="location.reload()">もう一度やる</div>
-        <div class="btn" onclick="resetData()" style="background:#999; font-size:12px;">データをリセット</div>
+        <div class="btn" onclick="resetData()" style="background:#999; font-size:12px; margin-top:40px;">データをリセット</div>
     </div>
 
 <script>
-    // ▼ データ（ここに1000語入れられます）
-    const ALL_DATA = [
-        { "id": 1, "en": "accept", "ja": "受け入れる", "cat": "verb" },
-        { "id": 2, "en": "add", "ja": "加える", "cat": "verb" },
-        { "id": 3, "en": "agree", "ja": "賛成する", "cat": "verb" },
-        { "id": 4, "en": "allow", "ja": "許す", "cat": "verb" },
-        { "id": 5, "en": "appear", "ja": "現れる", "cat": "verb" },
-        { "id": 6, "en": "arrive", "ja": "到着する", "cat": "verb" },
-        { "id": 7, "en": "ask", "ja": "尋ねる", "cat": "verb" },
-        { "id": 8, "en": "become", "ja": "～になる", "cat": "verb" },
-        { "id": 9, "en": "begin", "ja": "始める", "cat": "verb" },
-        { "id": 10, "en": "believe", "ja": "信じる", "cat": "verb" },
-        { "id": 49, "en": "enough", "ja": "十分な", "cat": "adj" },
-        { "id": 50, "en": "famous", "ja": "有名な", "cat": "adj" }
-    ];
+    // データ変数 ALL_DATA は words.js 側で定義されているため、ここでは宣言しません。
 
-    let currentStack = []; // 今学習するカードの山
+    let currentStack = []; // 学習用スタック
     let cardContainer = document.getElementById('card-container');
     
     // ■ 起動時の処理
     window.onload = function() {
+        // words.js が正しく読み込めていない場合のエラーハンドリング
+        if (typeof ALL_DATA === 'undefined') {
+            alert('エラー: words.js が見つかりません。index.htmlと同じ場所に置いてください。');
+            return;
+        }
         loadProgress();
     };
 
@@ -154,14 +161,16 @@
         // 優先度順に並べる: 1(苦手) > 0(未) > 2(完了)は除外
         currentStack = ALL_DATA.filter(word => {
             const status = log[word.id] ? log[word.id].status : 0;
-            return status !== 2; // 「覚えた」以外を対象にする
+            return status !== 2; // 「覚えた(2)」以外を対象にする
         }).sort((a, b) => {
             const statusA = log[a.id] ? log[a.id].status : 0;
             const statusB = log[b.id] ? log[b.id].status : 0;
-            return statusB - statusA; // 苦手(1)を先に
+            // 降順ソート: 1(苦手) を 0(未学習) より先にする
+            return statusB - statusA;
         });
 
-        // とりあえず先頭10枚だけやる（負荷軽減）
+        // 1回あたりの枚数制限（例：最大10枚）
+        // ※もっとやりたい場合はここを 20 とかに変えてください
         if(currentStack.length > 10) currentStack = currentStack.slice(0, 10);
 
         if (currentStack.length === 0) {
@@ -173,7 +182,7 @@
 
     // ■ カードの描画
     function renderCard() {
-        cardContainer.innerHTML = ''; // クリア
+        cardContainer.innerHTML = ''; // 画面クリア
         if (currentStack.length === 0) {
             showFinish();
             return;
@@ -181,7 +190,7 @@
 
         const word = currentStack[0];
         
-        // HTML要素を作成
+        // カード要素を作成
         const el = document.createElement('div');
         el.className = 'card';
         el.innerHTML = `
@@ -196,10 +205,10 @@
 
         cardContainer.appendChild(el);
 
-        // タップで正解表示
+        // タップ処理
         let isRevealed = false;
+        // Hammer.jsと競合しないよう、クリックイベントで判定
         el.addEventListener('click', (e) => {
-            // スワイプ中の誤タップ防止などの制御も本来は必要
             if(!isRevealed) {
                 el.querySelector('.ja-area').innerHTML = `<div class="ja-text">${word.ja}</div>`;
                 isRevealed = true;
@@ -208,10 +217,13 @@
 
         // スワイプ設定 (Hammer.js)
         const hammer = new Hammer(el);
+        
+        // スワイプ中
         hammer.on('pan', (event) => {
+            // カードを動かす
             el.style.transform = `translateX(${event.deltaX}px) rotate(${event.deltaX * 0.05}deg)`;
             
-            // ラベルの表示制御
+            // ラベルの透明度を変える
             if (event.deltaX > 0) {
                 el.querySelector('.status-like').style.opacity = event.deltaX / 100;
                 el.querySelector('.status-nope').style.opacity = 0;
@@ -221,14 +233,13 @@
             }
         });
 
+        // スワイプ終了時
         hammer.on('panend', (event) => {
-            const threshold = 100; // スワイプ判定の距離
+            const threshold = 100; // このピクセル以上動かしたら決定
             if (event.deltaX > threshold) {
-                // 右へ（覚えた）
-                processSwipe(word.id, 2);
+                processSwipe(word.id, 2); // 右へ（完了）
             } else if (event.deltaX < -threshold) {
-                // 左へ（まだ）
-                processSwipe(word.id, 1);
+                processSwipe(word.id, 1); // 左へ（苦手）
             } else {
                 // 元に戻る
                 el.style.transform = '';
@@ -238,26 +249,29 @@
         });
     }
 
-    // ■ スワイプ後の処理
+    // ■ スワイプ決定後のデータ処理
     function processSwipe(id, status) {
         // ログ保存
         const logStr = localStorage.getItem('eiken3_log');
         let log = logStr ? JSON.parse(logStr) : {};
+        
         log[id] = { status: status, date: new Date().toISOString() };
         localStorage.setItem('eiken3_log', JSON.stringify(log));
 
-        // 次へ
-        currentStack.shift(); // 先頭を削除
+        // 次のカードへ
+        currentStack.shift(); 
         renderCard();
     }
 
+    // ■ 終了画面表示
     function showFinish() {
         cardContainer.style.display = 'none';
         document.getElementById('finish-screen').style.display = 'flex';
     }
 
+    // ■ データリセット機能
     function resetData() {
-        if(confirm('学習記録を全てリセットしますか？')) {
+        if(confirm('学習記録を全てリセットして、最初からやり直しますか？')) {
             localStorage.removeItem('eiken3_log');
             location.reload();
         }
