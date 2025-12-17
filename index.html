@@ -91,7 +91,6 @@
             touch-action: manipulation;
         }
 
-        /* 覚えたリストボタン（シンプルに） */
         .list-btn {
             background: white; color: #3498db; 
             border: 2px solid #3498db;
@@ -263,11 +262,8 @@
     });
 
     function handleAnswer(isRemembered) {
-        if (!isRemembered && !isAnswerShown) {
-            document.getElementById('card-face').click();
-            return;
-        }
-
+        // ★修正：問答無用で処理開始
+        
         const word = sessionQueue[currentWordIndex];
         const u = myData[word.id] || { level: 0 };
 
@@ -286,6 +282,7 @@
                 myData[word.id] = { level: nextLv, nextDate: date.toISOString().split('T')[0] };
             }
         } else {
+            // ★まだ...（日本語は出さない。レベルリセットして最後に回す）
             triggerHaptic(false);
             myData[word.id] = { level: 0, nextDate: new Date().toISOString().split('T')[0] };
             sessionQueue.push(word);
@@ -295,6 +292,7 @@
 
         currentWordIndex++;
         if (currentWordIndex < sessionQueue.length) {
+            // 待機時間も100msでサクサク次へ
             setTimeout(showQuestion, 100);
         } else {
             finishSession();
