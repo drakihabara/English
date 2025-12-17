@@ -7,10 +7,10 @@
     <script src="words.js"></script>
 
     <style>
-        /* --- 元のデザインを継承 --- */
+        /* --- 全体設定 --- */
         body {
             font-family: "Helvetica Neue", Arial, sans-serif;
-            background-color: #f0f2f5; /* 元の背景色 */
+            background-color: #f0f2f5;
             margin: 0;
             height: 100vh;
             display: flex;
@@ -37,11 +37,11 @@
         }
         .active { display: flex; }
 
-        /* --- カードデザイン (元のCSSを再現) --- */
+        /* --- カードデザイン --- */
         #card-container {
             position: relative;
             width: 300px;
-            height: 400px; /* ボタンのために少し短く調整 */
+            height: 400px;
             margin-bottom: 20px;
         }
 
@@ -50,7 +50,7 @@
             height: 100%;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* 元の影 */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -86,7 +86,7 @@
         .ja-text {
             font-size: 28px;
             font-weight: bold;
-            color: #e74c3c; /* 元の赤色 */
+            color: #e74c3c;
             opacity: 0;
             transition: opacity 0.2s;
         }
@@ -97,7 +97,7 @@
             color: #ccc;
         }
 
-        /* --- ボタンエリア (カードの下に配置) --- */
+        /* --- ボタンエリア --- */
         .controls {
             width: 300px;
             display: flex;
@@ -108,7 +108,7 @@
             flex: 1;
             height: 60px;
             border: none;
-            border-radius: 30px; /* 丸みのあるボタン */
+            border-radius: 30px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
@@ -120,14 +120,12 @@
         }
         .action-btn:active { transform: scale(0.96); }
 
-        /* 指定された色 */
         .btn-check { background-color: #ffe0b2; color: #d35400; }
         .btn-master { background-color: #c8e6c9; color: #27ae60; }
 
-
-        /* --- タイトル・結果画面のボタン --- */
+        /* --- メインボタン --- */
         .main-btn {
-            background: #3498db; /* 元の青色 */
+            background: #3498db;
             color: white;
             padding: 15px 40px;
             border-radius: 30px;
@@ -150,7 +148,6 @@
             margin-bottom: 10px;
         }
 
-        /* --- その他 --- */
         h1 { font-size: 28px; margin-bottom: 10px; color: #333; }
         .stats-text { color: #888; margin-bottom: 40px; }
         
@@ -168,12 +165,11 @@
         <p class="stats-text" id="home-stats">読み込み中...</p>
         
         <button class="main-btn" onclick="startSession()">学習スタート</button>
-        <button class="sub-btn" onclick="showMasteredList()">卒業リスト</button>
+        <button class="sub-btn" onclick="showMasteredList()">覚えたリスト</button>
         
         <div style="margin-top: 20px; color: #888; font-size: 14px;">
             <label><input type="checkbox" id="speech-toggle" checked> 音声読み上げ</label>
         </div>
-
         <div class="reset-link" onclick="resetAllData()">データリセット</div>
     </div>
 
@@ -200,29 +196,27 @@
     </div>
 
     <div id="screen-result" class="screen">
-        <h2>コンプリート</h2>
-        <div id="result-msg" style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 30px;"></div>
+        <h2>お疲れ様でした</h2>
+        <div id="result-msg" style="font-size: 20px; font-weight: bold; color: #555; margin-bottom: 30px;"></div>
         
-        <div id="review-preview" style="background:white; width:260px; padding:20px; border-radius:15px; margin-bottom:20px; text-align:left; color:#666; font-size:14px; max-height:150px; overflow-y:auto;"></div>
+        <div id="review-preview" style="background:white; width:260px; padding:20px; border-radius:15px; margin-bottom:20px; text-align:left; color:#666; font-size:14px; max-height:150px; overflow-y:auto; display:none;"></div>
 
         <button class="main-btn" onclick="goHome()">タイトルへ</button>
     </div>
 
     <div id="screen-list" class="screen">
-        <h2>卒業単語</h2>
+        <h2>覚えた単語</h2>
         <div id="mastered-list"></div>
         <button class="sub-btn" style="margin-top:20px;" onclick="goHome()">戻る</button>
     </div>
 
 <script>
-    // --- 変数定義 ---
     let myData = {}; 
     let sessionQueue = []; 
     let currentWordIndex = 0;
     let sessionResults = { master: 0, check: 0, checkWords: [] };
     let isAnswerShown = false;
 
-    // --- 初期化 ---
     window.onload = function() {
         if (typeof ALL_DATA === 'undefined') {
             alert('エラー: words.js が見つかりません。');
@@ -251,10 +245,9 @@
             else if (status && status.level > 0) learningCount++;
         });
         document.getElementById('home-stats').innerHTML = 
-            `卒業: ${masterCount}語 / 学習中: ${learningCount}語`;
+            `覚えた: ${masterCount}語 / 学習中: ${learningCount}語`;
     }
 
-    // --- 学習開始 ---
     function startSession() {
         const todayStr = new Date().toISOString().split('T')[0];
         let reviewList = [];
@@ -275,7 +268,7 @@
         sessionQueue = [...pickedReview, ...pickedNew];
 
         if (sessionQueue.length === 0) {
-            alert("本日の学習分は完了しています！");
+            alert("本日の学習分は完了しています。");
             return;
         }
 
@@ -285,7 +278,6 @@
         showQuestion();
     }
 
-    // --- カード表示 ---
     function showQuestion() {
         const word = sessionQueue[currentWordIndex];
         isAnswerShown = false;
@@ -294,32 +286,26 @@
         document.getElementById('q-cat').textContent = word.cat ? `[${word.cat}]` : '';
         document.getElementById('q-ja').textContent = word.ja;
         
-        // 答え隠す・ヒント出す
-        document.getElementById('q-ja').classList.remove('show');
-        document.getElementById('q-ja').style.display = 'none';
+        const ja = document.getElementById('q-ja');
+        ja.classList.remove('show');
+        ja.style.display = 'none';
         document.getElementById('hint-msg').style.display = 'block';
         
         if (document.getElementById('speech-toggle').checked) { speak(word.en); }
     }
 
-    // カードタップでめくる
     document.getElementById('card-face').addEventListener('click', () => {
         if(!isAnswerShown) {
             document.getElementById('hint-msg').style.display = 'none';
             const ja = document.getElementById('q-ja');
             ja.style.display = 'block';
-            
-            // 少し遅れてフェードイン
             setTimeout(() => ja.classList.add('show'), 10);
-            
             isAnswerShown = true;
         }
     });
 
-    // --- 回答処理 ---
     function handleAnswer(isRemembered) {
         if (!isAnswerShown) {
-            // まだめくってないなら、めくる処理だけする
             document.getElementById('card-face').click();
             return;
         }
@@ -343,7 +329,6 @@
                 date.setDate(date.getDate() + addDays);
                 myData[word.id] = { level: nextLv, nextDate: date.toISOString().split('T')[0] };
             }
-
         } else {
             triggerHaptic(false);
             sessionResults.check++;
@@ -363,16 +348,21 @@
 
     function finishSession() {
         changeScreen('screen-result');
+        // 結果メッセージ（数字のみ）
         document.getElementById('result-msg').innerHTML = 
             `覚えた: ${sessionResults.master} / まだ: ${sessionResults.check}`;
         
         const listDiv = document.getElementById('review-preview');
+        
+        // 要チェック単語がある場合のみ表示、なければ非表示（コメントもなし）
         if (sessionResults.checkWords.length > 0) {
+            listDiv.style.display = 'block';
             let html = '<b>要チェック:</b><br>';
             sessionResults.checkWords.forEach(w => { html += `・${w.en}<br>`; });
             listDiv.innerHTML = html;
         } else {
-            listDiv.innerHTML = "全問クリア！素晴らしい！";
+            listDiv.style.display = 'none';
+            listDiv.innerHTML = "";
         }
     }
 
@@ -391,7 +381,10 @@
                 listContainer.appendChild(div);
             }
         });
-        if(count === 0) listContainer.innerHTML = '<div style="text-align:center; color:#ccc;">なし</div>';
+
+        if(count === 0) {
+            listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#ccc; font-size:13px;">まだありません。</div>';
+        }
         changeScreen('screen-list');
     }
 
@@ -400,7 +393,10 @@
         document.getElementById(id).classList.add('active');
     }
     
-    function goHome() { updateHomeStats(); changeScreen('screen-title'); }
+    function goHome() { 
+        updateHomeStats(); 
+        changeScreen('screen-title'); 
+    }
 
     function speak(text) {
         if ('speechSynthesis' in window) {
