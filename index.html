@@ -123,7 +123,7 @@
         .btn-check { background-color: #ffe0b2; color: #d35400; }
         .btn-master { background-color: #c8e6c9; color: #27ae60; }
 
-        /* --- メインメニューボタン --- */
+        /* --- メインボタン --- */
         .main-btn {
             background: #3498db;
             color: white;
@@ -134,28 +134,13 @@
             border: none;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
-            margin-bottom: 20px;
-            text-decoration: none;
-        }
-        .sub-btn {
-            background: white;
-            color: #3498db;
-            border: 2px solid #3498db;
-            padding: 10px 30px;
-            border-radius: 30px;
-            font-weight: bold;
-            cursor: pointer;
             margin-bottom: 10px;
+            text-decoration: none;
         }
 
         h1 { font-size: 28px; margin-bottom: 30px; color: #333; }
         
-        /* リスト画面 */
-        #mastered-list { width: 300px; height: 400px; overflow-y: auto; background: white; border-radius: 20px; padding: 20px; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 10px; }
-        .list-item { border-bottom: 1px solid #eee; padding: 10px 0; display:flex; justify-content:space-between; }
-        
-        /* リセットリンク */
-        .reset-link { margin-top: 40px; font-size: 12px; color: #bbb; text-decoration: underline; cursor: pointer; }
+        .reset-link { margin-top: 50px; font-size: 12px; color: #bbb; text-decoration: underline; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -211,14 +196,12 @@
     </div>
 
 <script>
-    // --- 変数定義 ---
     let myData = {}; 
     let sessionQueue = []; 
     let currentWordIndex = 0;
     let sessionResults = { checkWords: [] };
     let isAnswerShown = false;
 
-    // --- 初期化 ---
     window.onload = function() {
         if (typeof ALL_DATA === 'undefined') {
             alert('エラー: words.js が見つかりません。');
@@ -236,7 +219,6 @@
         localStorage.setItem('eiken3_discovery_data', JSON.stringify(myData));
     }
 
-    // --- 学習開始 ---
     function startSession() {
         const todayStr = new Date().toISOString().split('T')[0];
         let reviewList = [];
@@ -244,23 +226,14 @@
 
         ALL_DATA.forEach(word => {
             const u = myData[word.id];
-            // Lv3(卒業)以外を対象
-            if (!u || u.level === 0) { 
-                newList.push(word); 
-            } 
-            else if (u.level === 3) { 
-                return; // 卒業済み
-            }
-            else if (u.nextDate <= todayStr) { 
-                reviewList.push(word); 
-            }
+            if (!u || u.level === 0) { newList.push(word); } 
+            else if (u.level === 3) { return; }
+            else if (u.nextDate <= todayStr) { reviewList.push(word); }
         });
 
-        // シャッフル
         reviewList.sort(() => Math.random() - 0.5);
         newList.sort(() => Math.random() - 0.5);
 
-        // セット作成 (復習5 + 新規10)
         const pickedReview = reviewList.slice(0, 5);
         const pickedNew = newList.slice(0, 10);
         sessionQueue = [...pickedReview, ...pickedNew];
@@ -277,7 +250,6 @@
         showQuestion();
     }
 
-    // --- 問題表示 ---
     function showQuestion() {
         const word = sessionQueue[currentWordIndex];
         isAnswerShown = false;
@@ -306,12 +278,6 @@
 
     // --- 回答処理 ---
     function handleAnswer(isRemembered) {
-        // 「まだ」の時は、答え未確認なら一旦めくって確認させる
-        if (!isRemembered && !isAnswerShown) {
-            document.getElementById('card-face').click();
-            return;
-        }
-
         const word = sessionQueue[currentWordIndex];
         const u = myData[word.id] || { level: 0 };
 
@@ -319,7 +285,6 @@
             // ★覚えた！
             triggerHaptic(true);
             
-            // レベルアップ (Lv0ループから抜けた場合もLv1に昇格)
             let nextLv = u.level + 1;
             let addDays = 0;
             if (nextLv === 1) addDays = 1;      // 明日
@@ -334,18 +299,17 @@
             }
 
         } else {
-            // ★まだ...（ペナルティ＆ループ）
+            // ★まだ...（日本語表示せず即ループ＆次へ）
             triggerHaptic(false);
             
-            // リスト追加
             if (!sessionResults.checkWords.includes(word)) {
                 sessionResults.checkWords.push(word);
             }
             
-            // レベルを0（新規）にリセット
+            // レベルリセット
             myData[word.id] = { level: 0, nextDate: new Date().toISOString().split('T')[0] };
 
-            // キューの最後尾に追加（その日のうちに覚えるまで帰さない）
+            // キューの最後尾に追加（再挑戦）
             sessionQueue.push(word);
         }
 
@@ -353,6 +317,7 @@
 
         currentWordIndex++;
         if (currentWordIndex < sessionQueue.length) {
+            // テンポよく進む (100ms)
             setTimeout(showQuestion, 100);
         } else {
             finishSession();
@@ -374,7 +339,6 @@
         }
     }
 
-    // --- 覚えたリスト表示 ---
     function showMasteredList() {
         const listContainer = document.getElementById('mastered-list');
         listContainer.innerHTML = '';
