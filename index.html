@@ -138,19 +138,17 @@
             text-decoration: none;
         }
 
-        h1 { font-size: 28px; margin-bottom: 10px; color: #333; }
-        .stats-text { color: #888; margin-bottom: 40px; }
+        h1 { font-size: 28px; margin-bottom: 30px; color: #333; }
         
-        .reset-link { margin-top: 30px; font-size: 12px; color: #bbb; text-decoration: underline; cursor: pointer; }
+        .reset-link { margin-top: 50px; font-size: 12px; color: #bbb; text-decoration: underline; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="screen-title" class="screen active">
         <h1>英語学習</h1>
-        <p class="stats-text" id="home-stats">読み込み中...</p>
-        
         <button class="main-btn" onclick="startSession()">学習スタート</button>
+        
         <div style="margin-top: 20px; color: #888; font-size: 14px;">
             <label><input type="checkbox" id="speech-toggle" checked> 音声読み上げ</label>
         </div>
@@ -202,7 +200,6 @@
             return;
         }
         loadUserData();
-        updateHomeStats();
     };
 
     function loadUserData() {
@@ -212,19 +209,6 @@
 
     function saveData() {
         localStorage.setItem('eiken3_discovery_data', JSON.stringify(myData));
-        updateHomeStats();
-    }
-
-    function updateHomeStats() {
-        let masterCount = 0;
-        let learningCount = 0;
-        ALL_DATA.forEach(w => {
-            const status = myData[w.id];
-            if (status && status.level === 3) masterCount++;
-            else if (status && status.level > 0) learningCount++;
-        });
-        document.getElementById('home-stats').innerHTML = 
-            `覚えた: ${masterCount}語 / 学習中: ${learningCount}語`;
     }
 
     function startSession() {
@@ -285,7 +269,8 @@
     });
 
     function handleAnswer(isRemembered) {
-        if (!isAnswerShown) {
+        // 「覚えた」なら即次へ、「まだ」なら答え未表示の場合のみ表示
+        if (!isRemembered && !isAnswerShown) {
             document.getElementById('card-face').click();
             return;
         }
@@ -320,7 +305,7 @@
 
         currentWordIndex++;
         if (currentWordIndex < sessionQueue.length) {
-            setTimeout(showQuestion, 150);
+            setTimeout(showQuestion, 100);
         } else {
             finishSession();
         }
@@ -347,7 +332,6 @@
     }
     
     function goHome() { 
-        updateHomeStats(); 
         changeScreen('screen-title'); 
     }
 
