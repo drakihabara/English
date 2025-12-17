@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>単語Discovery</title>
+    <title>英語学習</title>
     <script src="words.js"></script>
 
     <style>
@@ -137,23 +137,9 @@
             margin-bottom: 10px;
             text-decoration: none;
         }
-        .sub-btn {
-            background: white;
-            color: #3498db;
-            border: 2px solid #3498db;
-            padding: 10px 30px;
-            border-radius: 30px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
 
         h1 { font-size: 28px; margin-bottom: 10px; color: #333; }
         .stats-text { color: #888; margin-bottom: 40px; }
-        
-        /* リスト画面 */
-        #mastered-list { width: 300px; height: 400px; overflow-y: auto; background: white; border-radius: 20px; padding: 20px; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 10px; }
-        .list-item { border-bottom: 1px solid #eee; padding: 10px 0; display:flex; justify-content:space-between; }
         
         .reset-link { margin-top: 30px; font-size: 12px; color: #bbb; text-decoration: underline; cursor: pointer; }
     </style>
@@ -161,12 +147,10 @@
 <body>
 
     <div id="screen-title" class="screen active">
-        <h1>Discovery</h1>
+        <h1>英語学習</h1>
         <p class="stats-text" id="home-stats">読み込み中...</p>
         
         <button class="main-btn" onclick="startSession()">学習スタート</button>
-        <button class="sub-btn" onclick="showMasteredList()">覚えたリスト</button>
-        
         <div style="margin-top: 20px; color: #888; font-size: 14px;">
             <label><input type="checkbox" id="speech-toggle" checked> 音声読み上げ</label>
         </div>
@@ -203,12 +187,6 @@
         <button class="main-btn" onclick="startSession()">つづける</button>
         
         <div style="margin-top:10px; font-size:14px; color:#999; text-decoration:underline;" onclick="goHome()">終了してタイトルへ</div>
-    </div>
-
-    <div id="screen-list" class="screen">
-        <h2>覚えた単語</h2>
-        <div id="mastered-list"></div>
-        <button class="sub-btn" style="margin-top:20px;" onclick="goHome()">戻る</button>
     </div>
 
 <script>
@@ -249,7 +227,6 @@
             `覚えた: ${masterCount}語 / 学習中: ${learningCount}語`;
     }
 
-    // --- セッション開始（つづけるボタンからも呼ばれる） ---
     function startSession() {
         const todayStr = new Date().toISOString().split('T')[0];
         let reviewList = [];
@@ -269,14 +246,12 @@
         const pickedNew = newList.slice(0, 10);
         sessionQueue = [...pickedReview, ...pickedNew];
 
-        // もし学習する単語がもう無かったら
         if (sessionQueue.length === 0) {
-            alert("本日の学習分はすべて完了しています！");
-            goHome(); // タイトルに戻す
+            alert("本日の学習分は完了しています。");
+            goHome();
             return;
         }
 
-        // 学習開始
         currentWordIndex = 0;
         sessionResults = { master: 0, check: 0, checkWords: [] };
         changeScreen('screen-quiz');
@@ -353,8 +328,6 @@
 
     function finishSession() {
         changeScreen('screen-result');
-        // コメントなし、数字なし
-        
         const listDiv = document.getElementById('review-preview');
         
         if (sessionResults.checkWords.length > 0) {
@@ -366,28 +339,6 @@
             listDiv.style.display = 'none';
             listDiv.innerHTML = "";
         }
-    }
-
-    function showMasteredList() {
-        const listContainer = document.getElementById('mastered-list');
-        listContainer.innerHTML = '';
-        let count = 0;
-        
-        ALL_DATA.forEach(word => {
-            const u = myData[word.id];
-            if (u && u.level === 3) {
-                count++;
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                div.innerHTML = `<span>${word.en}</span> <span style="color:#888; font-size:12px;">${word.ja}</span>`;
-                listContainer.appendChild(div);
-            }
-        });
-
-        if(count === 0) {
-            listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#ccc; font-size:13px;">まだありません。</div>';
-        }
-        changeScreen('screen-list');
     }
 
     function changeScreen(id) {
