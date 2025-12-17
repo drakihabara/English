@@ -81,21 +81,44 @@
         .btn-check { background-color: #ffe0b2; color: #d35400; }
         .btn-master { background-color: #c8e6c9; color: #27ae60; }
 
-        /* --- メインボタン --- */
+        /* --- タイトル画面のボタン --- */
         .main-btn {
-            background: #3498db; color: white; padding: 15px 40px; border-radius: 30px;
-            font-size: 18px; font-weight: bold; border: none; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); margin-bottom: 10px;
-            touch-action: manipulation;
-        }
-        .sub-btn {
-            background: white; color: #3498db; border: 2px solid #3498db; padding: 10px 30px;
-            border-radius: 30px; font-weight: bold; cursor: pointer; margin-bottom: 10px;
+            background: #3498db; color: white; 
+            width: 260px; padding: 18px 0; /* 大きく調整 */
+            border-radius: 30px; font-size: 20px; font-weight: bold; 
+            border: none; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); margin-bottom: 20px;
             touch-action: manipulation;
         }
 
-        h1 { font-size: 28px; margin-bottom: 30px; color: #333; }
-        .reset-link { margin-top: 50px; font-size: 12px; color: #bbb; text-decoration: underline; cursor: pointer; }
+        /* 覚えたリストボタン（大きく、金色に） */
+        .list-btn {
+            background: white; color: #f39c12; 
+            border: 3px solid #f39c12; /* 太めの枠 */
+            width: 260px; padding: 18px 0; /* メインと同じ大きさ */
+            border-radius: 30px; font-size: 20px; font-weight: bold; 
+            cursor: pointer; margin-bottom: 20px;
+            touch-action: manipulation;
+            box-shadow: 0 4px 10px rgba(243, 156, 18, 0.2);
+        }
+
+        /* 戻るボタン等は控えめに */
+        .sub-btn {
+            background: white; color: #3498db; border: 2px solid #3498db; 
+            padding: 10px 30px; border-radius: 30px; font-weight: bold; 
+            cursor: pointer; margin-bottom: 10px;
+            touch-action: manipulation;
+        }
+
+        h1 { font-size: 28px; margin-bottom: 40px; color: #333; }
+        
+        /* リセットリンク（右下に配置） */
+        .reset-link { 
+            position: absolute;
+            bottom: 40px; /* スマホUI避け */
+            right: 25px;
+            font-size: 12px; color: #bbb; text-decoration: underline; cursor: pointer; 
+        }
 
         /* --- 達成感演出（覚えたリスト） --- */
         .master-header {
@@ -117,14 +140,15 @@
 <body>
 
     <div id="screen-title" class="screen active">
-        <h1>英語学習</h1>
+        <h1 style="margin-top: -40px;">英語学習</h1>
         
         <button class="main-btn" onclick="startSession()">学習スタート</button>
-        <button class="sub-btn" onclick="showMasteredList()">覚えたリスト</button>
+        <button class="list-btn" onclick="showMasteredList()">覚えたリスト</button>
         
         <div style="margin-top: 20px; color: #888; font-size: 14px;">
             <label><input type="checkbox" id="speech-toggle" checked> 音声読み上げ</label>
         </div>
+        
         <div class="reset-link" onclick="resetAllData()">データリセット</div>
     </div>
 
@@ -249,8 +273,11 @@
     });
 
     function handleAnswer(isRemembered) {
-        // ★修正：答えの表示状態に関わらず、ボタンが押されたら即処理する
-        
+        if (!isRemembered && !isAnswerShown) {
+            document.getElementById('card-face').click();
+            return;
+        }
+
         const word = sessionQueue[currentWordIndex];
         const u = myData[word.id] || { level: 0 };
 
@@ -278,7 +305,6 @@
 
         currentWordIndex++;
         if (currentWordIndex < sessionQueue.length) {
-            // 即座に次へ
             setTimeout(showQuestion, 100);
         } else {
             finishSession();
