@@ -81,7 +81,7 @@
         .btn-check { background-color: #ffe0b2; color: #d35400; }
         .btn-master { background-color: #c8e6c9; color: #27ae60; }
 
-        /* --- メインボタン --- */
+        /* --- タイトル画面のボタン --- */
         .main-btn {
             background: #3498db; color: white; 
             width: 260px; padding: 18px 0; 
@@ -91,15 +91,14 @@
             touch-action: manipulation;
         }
 
-        /* 覚えたリストボタン */
+        /* 覚えたリストボタン（シンプルに） */
         .list-btn {
-            background: white; color: #f39c12; 
-            border: 3px solid #f39c12; 
+            background: white; color: #3498db; 
+            border: 2px solid #3498db;
             width: 260px; padding: 18px 0; 
             border-radius: 30px; font-size: 20px; font-weight: bold; 
             cursor: pointer; margin-bottom: 20px;
             touch-action: manipulation;
-            box-shadow: 0 4px 10px rgba(243, 156, 18, 0.2);
         }
 
         .sub-btn {
@@ -116,21 +115,15 @@
             font-size: 12px; color: #bbb; text-decoration: underline; cursor: pointer; 
         }
 
-        /* --- 達成感演出（覚えたリスト） --- */
-        .master-header {
-            background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
-            width: 100%; padding: 30px 0; text-align: center; color: white;
-            box-shadow: 0 4px 10px rgba(243, 156, 18, 0.3); margin-bottom: 10px;
-        }
-        .master-count { font-size: 48px; font-weight: bold; line-height: 1; margin: 10px 0; }
-        .master-label { font-size: 14px; opacity: 0.9; font-weight: bold; letter-spacing: 1px; }
-
-        #mastered-list { width: 100%; flex: 1; overflow-y: auto; padding: 10px 20px; box-sizing: border-box; }
+        /* --- リストデザイン（シンプル） --- */
+        #mastered-list { width: 100%; max-width: 600px; flex: 1; overflow-y: auto; padding: 10px 20px; box-sizing: border-box; }
         .list-item {
-            background: white; padding: 15px; margin-bottom: 10px; border-radius: 12px;
+            border-bottom: 1px solid #eee; padding: 15px 5px;
             display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #f1c40f;
+            background: none;
         }
+        .list-en { font-weight: bold; font-size: 18px; color: #333; }
+        .list-ja { font-size: 14px; color: #888; }
     </style>
 </head>
 <body>
@@ -177,14 +170,15 @@
         <div style="margin-top:20px; font-size:14px; color:#999; text-decoration:underline;" onclick="goHome()">終了してタイトルへ</div>
     </div>
 
-    <div id="screen-list" class="screen" style="justify-content: flex-start; background: #f9f9f9;">
-        <div class="master-header">
-            <div style="font-size:24px;">👑</div>
-            <div class="master-count" id="master-count-display">0</div>
-            <div class="master-label">MASTERED WORDS</div>
+    <div id="screen-list" class="screen" style="justify-content: flex-start; background: white;">
+        <div style="width:100%; max-width:600px; padding: 20px; box-sizing:border-box; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+            <h2 style="margin:0; font-size:20px;">覚えた単語</h2>
+            <div style="color:#888; font-weight:bold;" id="master-count-simple">0語</div>
         </div>
+        
         <div id="mastered-list"></div>
-        <div style="padding: 20px;">
+        
+        <div style="padding: 20px; width:100%; text-align:center; box-sizing:border-box;">
             <button class="sub-btn" onclick="goHome()">戻る</button>
         </div>
     </div>
@@ -269,8 +263,11 @@
     });
 
     function handleAnswer(isRemembered) {
-        // ★修正済み：ボタンを押したら即座に処理して次へ進む
-        
+        if (!isRemembered && !isAnswerShown) {
+            document.getElementById('card-face').click();
+            return;
+        }
+
         const word = sessionQueue[currentWordIndex];
         const u = myData[word.id] || { level: 0 };
 
@@ -310,7 +307,7 @@
 
     function showMasteredList() {
         const listContainer = document.getElementById('mastered-list');
-        const countDisplay = document.getElementById('master-count-display');
+        const countDisplay = document.getElementById('master-count-simple');
         listContainer.innerHTML = '';
         let count = 0;
         
@@ -321,20 +318,17 @@
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 div.innerHTML = `
-                    <div>
-                        <span style="font-weight:bold; font-size:18px;">${word.en}</span>
-                        <span style="color:#999; font-size:12px; margin-left:10px;">${word.ja}</span>
-                    </div>
-                    <span>👑</span>
+                    <div class="list-en">${word.en}</div>
+                    <div class="list-ja">${word.ja}</div>
                 `;
                 listContainer.appendChild(div);
             }
         });
 
-        countDisplay.textContent = count;
+        countDisplay.textContent = count + "語";
 
         if(count === 0) {
-            listContainer.innerHTML = '<div style="text-align:center; padding:40px; color:#ccc; font-size:14px;">まだありません。<br>これからの成長が楽しみですね！</div>';
+            listContainer.innerHTML = '<div style="text-align:center; padding:40px; color:#ccc; font-size:14px;">まだありません</div>';
         }
         changeScreen('screen-list');
     }
