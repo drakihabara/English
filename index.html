@@ -2,292 +2,270 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>単語特訓</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>単語Discovery</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="words.js"></script>
 
     <style>
+        /* --- 全体設定 --- */
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f0f2f5;
+            background-color: #f7f9fa; /* 優しい白 */
             margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             height: 100vh;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
-            position: relative; /* リセットボタン配置のため */
-        }
-
-        #card-container {
-            position: relative;
-            width: 300px;
-            height: 450px;
-        }
-
-        .card {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            transition: transform 0.3s ease;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .en-text {
-            font-size: 42px;
-            font-weight: bold;
             color: #333;
-            margin-bottom: 10px;
-            padding: 0 10px;
-            word-break: break-all;
+            user-select: none; /* テキスト選択禁止（アプリっぽく） */
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .cat-text {
-            font-size: 14px;
-            color: #888;
-            margin-bottom: 40px;
-        }
-
-        .ja-text {
-            font-size: 28px;
-            font-weight: bold;
-            color: #e74c3c;
-        }
-
-        .ja-area {
-            min-height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .hint-text {
-            font-size: 16px;
-            color: #ccc;
-        }
-
-        .status-label {
-            position: absolute;
-            top: 20px;
-            font-size: 32px;
-            font-weight: bold;
-            padding: 5px 10px;
-            border: 4px solid;
-            border-radius: 8px;
-            opacity: 0; 
-            z-index: 10;
-        }
-        .status-like { right: 20px; color: #2ecc71; border-color: #2ecc71; transform: rotate(15deg); }
-        .status-nope { left: 20px; color: #e74c3c; border-color: #e74c3c; transform: rotate(-15deg); }
-
-        /* ▼ 終了画面のスタイル */
-        #finish-screen {
-            display: none;
+        /* --- 画面切り替え用コンテナ --- */
+        .screen {
+            display: none; /* デフォルト非表示 */
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
             width: 100%;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
+        .active { display: flex; } /* アクティブな画面だけ表示 */
 
-        /* コンプリートの文字 */
-        #finish-screen h2 {
-            font-size: 36px;
-            color: #333;
-            margin-bottom: 40px;
-            letter-spacing: 2px;
-        }
-
-        .btn {
-            background: #3498db;
+        /* --- タイトル画面 --- */
+        h1 { font-size: 28px; margin-bottom: 10px; color: #2c3e50; }
+        .stats-text { color: #7f8c8d; font-size: 14px; margin-bottom: 40px; }
+        
+        .main-btn {
+            background: #2c3e50;
             color: white;
-            padding: 15px 40px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: bold;
+            width: 240px;
+            padding: 18px;
+            border-radius: 12px;
             font-size: 18px;
+            font-weight: bold;
+            border: none;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
             transition: transform 0.1s;
         }
-        .btn:active { transform: scale(0.98); }
+        .main-btn:active { transform: scale(0.96); }
 
-        /* ▼ リセットボタン（右下隅へ移動） */
-        .reset-btn {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            font-size: 12px;
-            color: #bbb;
-            background: none;
-            border: 1px solid #ddd;
-            padding: 5px 10px;
-            border-radius: 5px;
+        .sub-btn {
+            background: #fff;
+            color: #2c3e50;
+            border: 2px solid #ecf0f1;
+            width: 240px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
             cursor: pointer;
-            z-index: 100; /* 最前面に */
+            margin-bottom: 10px;
         }
+
+        /* --- クイズ画面 (没頭モード) --- */
+        #quiz-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .word-card {
+            text-align: center;
+            margin-bottom: 60px; /* ボタンとの距離 */
+        }
+
+        .en-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            word-break: break-all;
+        }
+        
+        .cat-display {
+            font-size: 12px;
+            color: #bdc3c7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .ja-display {
+            font-size: 28px;
+            font-weight: bold;
+            color: #e67e22; /* 答えの色 */
+            min-height: 40px;
+            opacity: 0; /* 最初は隠す */
+            transition: opacity 0.2s;
+        }
+        .ja-display.show { opacity: 1; }
+
+        /* --- 操作エリア (画面下部) --- */
+        .controls {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px; /* 親指の位置調整 */
+        }
+
+        .action-btn {
+            flex: 1;
+            height: 70px;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+            position: relative;
+        }
+        .action-btn:active { transform: scale(0.95); }
+
+        /* 左：まだ (オレンジ) */
+        .btn-check {
+            background-color: #ffe0b2; /* パステルオレンジ */
+            color: #ef6c00;
+        }
+        /* 右：覚えた (緑) */
+        .btn-master {
+            background-color: #c8e6c9; /* パステルグリーン */
+            color: #2e7d32;
+        }
+
+        .icon { font-size: 20px; margin-bottom: 4px; }
+
+        /* 設定スイッチ */
+        .toggle-area {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        input[type="checkbox"] { transform: scale(1.2); margin-right: 8px; }
+
+        /* --- 完了画面 --- */
+        .result-box {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            width: 80%;
+            max-width: 320px;
+        }
+        .result-title { font-size: 16px; color: #95a5a6; margin-bottom: 10px; }
+        .result-score { font-size: 42px; font-weight: bold; color: #2c3e50; margin-bottom: 30px; }
+        .list-preview { text-align: left; font-size: 14px; color: #7f8c8d; margin-bottom: 30px; max-height: 100px; overflow-y: auto;}
+
+        /* --- 覚えたリスト画面 --- */
+        #mastered-list {
+            width: 100%;
+            max-width: 600px;
+            overflow-y: auto;
+            flex: 1;
+            margin-top: 20px;
+        }
+        .list-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .list-en { font-weight: bold; color: #2c3e50; }
+        .list-ja { color: #7f8c8d; font-size: 14px; }
+        .badge {
+            background: #f1c40f; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;
+        }
+
     </style>
 </head>
 <body>
 
-    <div id="card-container"></div>
+    <div id="screen-title" class="screen active">
+        <h1>Discovery</h1>
+        <p class="stats-text" id="home-stats">読み込み中...</p>
+        
+        <button class="main-btn" onclick="startSession()">学習スタート</button>
+        <button class="sub-btn" onclick="showMasteredList()">🏆 卒業リストを見る</button>
+        
+        <div class="toggle-area">
+            <label>
+                <input type="checkbox" id="speech-toggle" checked> 🔊 音声読み上げ ON
+            </label>
+        </div>
 
-    <div id="finish-screen">
-        <h2>コンプリート</h2>
-        <div class="btn" onclick="location.reload()">次のセット</div>
+        <div style="margin-top: 50px; font-size:12px; color:#ccc;" onclick="resetAllData()">
+            [ データリセット ]
+        </div>
     </div>
-    
-    <div class="reset-btn" onclick="resetData()">学習リセット</div>
+
+    <div id="screen-quiz" class="screen">
+        <div id="quiz-area">
+            <div class="word-card">
+                <div class="cat-display" id="q-cat">VERB</div>
+                <div class="en-display" id="q-en">apple</div>
+                <div class="ja-display" id="q-ja">リンゴ</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="action-btn btn-check" onclick="handleAnswer(false)">
+                <span class="icon">🔖</span>
+                <span>まだ...</span>
+            </button>
+            <button class="action-btn btn-master" onclick="handleAnswer(true)">
+                <span class="icon">⭕</span>
+                <span>覚えた！</span>
+            </button>
+        </div>
+        
+        <div style="margin-bottom: 20px; color: #bdc3c7; font-size: 12px;">
+            タップして答えを表示
+        </div>
+    </div>
+
+    <div id="screen-result" class="screen">
+        <div class="result-box">
+            <div class="result-title">SESSION COMPLETE</div>
+            <div class="result-score" id="result-msg">Good Job!</div>
+            
+            <div class="list-preview" id="review-preview">
+                </div>
+
+            <button class="main-btn" onclick="goHome()">タイトルへ</button>
+        </div>
+    </div>
+
+    <div id="screen-list" class="screen" style="justify-content: flex-start;">
+        <div style="width:100%; padding: 10px 0; display:flex; justify-content:space-between; align-items:center;">
+            <h2>🏆 卒業単語</h2>
+            <button class="sub-btn" style="width:auto; padding: 5px 15px;" onclick="goHome()">閉じる</button>
+        </div>
+        <div id="mastered-list">
+            </div>
+    </div>
 
 <script>
-    let currentStack = [];
-    let failedInSession = {}; 
-    let cardContainer = document.getElementById('card-container');
-    
-    window.onload = function() {
-        if (typeof ALL_DATA === 'undefined') {
-            alert('エラー: words.js が見つかりません。');
-            return;
-        }
-        loadProgress();
-    };
-
-    function loadProgress() {
-        const logStr = localStorage.getItem('eiken3_log');
-        const log = logStr ? JSON.parse(logStr) : {};
-        const now = new Date();
-
-        currentStack = ALL_DATA.filter(word => {
-            const record = log[word.id];
-            if (!record) return true;
-            if (record.next_review) {
-                const reviewDate = new Date(record.next_review);
-                return reviewDate <= now;
-            }
-            return true;
-        }).sort((a, b) => {
-            return a.id - b.id;
-        });
-
-        if(currentStack.length > 10) currentStack = currentStack.slice(0, 10);
-
-        if (currentStack.length === 0) {
-            showFinish();
-        } else {
-            failedInSession = {}; 
-            renderCard();
-        }
-    }
-
-    function renderCard() {
-        cardContainer.innerHTML = '';
-        if (currentStack.length === 0) {
-            showFinish();
-            return;
-        }
-
-        const word = currentStack[0];
-        const el = document.createElement('div');
-        el.className = 'card';
-        el.innerHTML = `
-            <div class="status-label status-like">覚えた</div>
-            <div class="status-label status-nope">まだ</div>
-            <div class="en-text">${word.en}</div>
-            <div class="cat-text">[${word.cat}]</div>
-            <div class="ja-area"><div class="hint-text">タップして意味を表示</div></div>
-        `;
-
-        cardContainer.appendChild(el);
-
-        let isRevealed = false;
-        el.addEventListener('click', () => {
-            if(!isRevealed) {
-                el.querySelector('.ja-area').innerHTML = `<div class="ja-text">${word.ja}</div>`;
-                isRevealed = true;
-            }
-        });
-
-        const hammer = new Hammer(el);
-        hammer.on('pan', (e) => {
-            el.style.transform = `translateX(${e.deltaX}px) rotate(${e.deltaX * 0.05}deg)`;
-            if (e.deltaX > 0) {
-                el.querySelector('.status-like').style.opacity = e.deltaX / 100;
-                el.querySelector('.status-nope').style.opacity = 0;
-            } else {
-                el.querySelector('.status-nope').style.opacity = Math.abs(e.deltaX) / 100;
-                el.querySelector('.status-like').style.opacity = 0;
-            }
-        });
-
-        hammer.on('panend', (e) => {
-            if (e.deltaX > 100) processSwipe(word.id, 'right');
-            else if (e.deltaX < -100) processSwipe(word.id, 'left');
-            else {
-                el.style.transform = '';
-                el.querySelector('.status-like').style.opacity = 0;
-                el.querySelector('.status-nope').style.opacity = 0;
-            }
-        });
-    }
-
-    function processSwipe(id, direction) {
-        const currentCard = currentStack[0];
-        currentStack.shift(); 
-
-        if (direction === 'left') {
-            console.log("失敗: " + currentCard.en);
-            failedInSession[id] = true;
-            currentStack.push(currentCard); // ゾンビ復活
-        } else {
-            console.log("成功: " + currentCard.en);
-            const now = new Date();
-            let addedDays = 0;
-
-            if (failedInSession[id]) {
-                addedDays = 2; // 苦戦: 2日後
-            } else {
-                addedDays = 7; // 一発: 1週間後
-            }
-
-            now.setDate(now.getDate() + addedDays);
-            
-            const logStr = localStorage.getItem('eiken3_log');
-            let log = logStr ? JSON.parse(logStr) : {};
-            
-            log[id] = { 
-                status: 2,
-                last_review: new Date().toISOString(),
-                next_review: now.toISOString()
-            };
-            localStorage.setItem('eiken3_log', JSON.stringify(log));
-        }
-
-        renderCard();
-    }
-
-    function showFinish() {
-        cardContainer.style.display = 'none';
-        document.getElementById('finish-screen').style.display = 'flex';
-        // リセットボタンはbody直下にあるので、ここでは何もしなくてOK
-    }
-
-    function resetData() {
-        if(confirm('学習記録を全てリセットして、最初からやり直しますか？')) {
-            localStorage.removeItem('eiken3_log');
-            location.reload();
-        }
-    }
-</script>
-</body>
-</html>
+    // --- グローバル変数 ---
+    let myData = {}; // 生
