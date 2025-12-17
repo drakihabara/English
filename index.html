@@ -134,7 +134,7 @@
             border: none;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             text-decoration: none;
         }
         .sub-btn {
@@ -196,12 +196,13 @@
     </div>
 
     <div id="screen-result" class="screen">
-        <h2>お疲れ様でした</h2>
-        <div id="result-msg" style="font-size: 20px; font-weight: bold; color: #555; margin-bottom: 30px;"></div>
+        <h2 style="margin-bottom:30px;">お疲れ様でした</h2>
         
-        <div id="review-preview" style="background:white; width:260px; padding:20px; border-radius:15px; margin-bottom:20px; text-align:left; color:#666; font-size:14px; max-height:150px; overflow-y:auto; display:none;"></div>
+        <div id="review-preview" style="background:white; width:260px; padding:20px; border-radius:15px; margin-bottom:30px; text-align:left; color:#666; font-size:14px; max-height:150px; overflow-y:auto; display:none;"></div>
 
-        <button class="main-btn" onclick="goHome()">タイトルへ</button>
+        <button class="main-btn" onclick="startSession()">つづける</button>
+        
+        <div style="margin-top:10px; font-size:14px; color:#999; text-decoration:underline;" onclick="goHome()">終了してタイトルへ</div>
     </div>
 
     <div id="screen-list" class="screen">
@@ -248,6 +249,7 @@
             `覚えた: ${masterCount}語 / 学習中: ${learningCount}語`;
     }
 
+    // --- セッション開始（つづけるボタンからも呼ばれる） ---
     function startSession() {
         const todayStr = new Date().toISOString().split('T')[0];
         let reviewList = [];
@@ -267,11 +269,14 @@
         const pickedNew = newList.slice(0, 10);
         sessionQueue = [...pickedReview, ...pickedNew];
 
+        // もし学習する単語がもう無かったら
         if (sessionQueue.length === 0) {
-            alert("本日の学習分は完了しています。");
+            alert("本日の学習分はすべて完了しています！");
+            goHome(); // タイトルに戻す
             return;
         }
 
+        // 学習開始
         currentWordIndex = 0;
         sessionResults = { master: 0, check: 0, checkWords: [] };
         changeScreen('screen-quiz');
@@ -348,13 +353,10 @@
 
     function finishSession() {
         changeScreen('screen-result');
-        // 結果メッセージ（数字のみ）
-        document.getElementById('result-msg').innerHTML = 
-            `覚えた: ${sessionResults.master} / まだ: ${sessionResults.check}`;
+        // コメントなし、数字なし
         
         const listDiv = document.getElementById('review-preview');
         
-        // 要チェック単語がある場合のみ表示、なければ非表示（コメントもなし）
         if (sessionResults.checkWords.length > 0) {
             listDiv.style.display = 'block';
             let html = '<b>要チェック:</b><br>';
