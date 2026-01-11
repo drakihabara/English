@@ -1,42 +1,210 @@
-let myData = {}; 
-let sessionQueue = []; 
-let currentWordIndex = 0;
-let isAnswerShown = false;
-let selectedGrade = '30';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>英検単語学習 GitHub版</title>
+    <style>
+        /* 基本スタイル（以前のものを継承・最適化） */
+        body, button, .card { font-family: sans-serif; touch-action: manipulation; user-select: none; }
+        body { background-color: #f0f2f5; margin: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; color: #333; }
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; position: absolute; }
+        .active { display: flex; }
+        #card-container { width: 320px; height: 400px; margin-bottom: 20px; }
+        .card { width: 100%; height: 100%; background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; cursor: pointer; }
+        .en-text { font-size: 40px; font-weight: bold; margin-bottom: 10px; word-break: break-all; padding: 0 10px; }
+        .cat-text { font-size: 14px; color: #888; margin-bottom: 40px; }
+        .ja-text { font-size: 26px; font-weight: bold; color: #e74c3c; display: none; }
+        .hint-text { font-size: 14px; color: #ccc; }
+        .controls { width: 320px; display: flex; gap: 15px; }
+        .action-btn { flex: 1; height: 60px; border-radius: 30px; font-size: 18px; border: none; font-weight: bold; color: white; cursor: pointer; }
+        .btn-check { background-color: #f39c12; }
+        .btn-master { background-color: #27ae60; }
+        .main-btn { width: 260px; padding: 15px 0; border-radius: 30px; font-size: 18px; margin-bottom: 10px; border: none; color: white; font-weight: bold; cursor: pointer; }
+        .bg-30 { background: #3498db; } .bg-25 { background: #e67e22; } .bg-20 { background: #2ecc71; }
+        .list-btn { width: 260px; padding: 12px 0; border-radius: 30px; background: white; border: 2px solid #ddd; cursor: pointer; margin-top: 10px; }
+        #mastered-list { width: 100%; max-width: 500px; overflow-y: auto; flex: 1; background: white; }
+        .list-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; display: flex; justify-content: center; align-items: center; z-index: 100; }
+    </style>
+</head>
+<body>
 
-// 各級のデータを保持するオブジェクト
-const GRADE_DATA = {
-    '30': [],
-    '25': [],
-    '20': []
-};
+    <div id="loading" class="loading-overlay">データ読み込み中...</div>
 
-window.onload = async function() {
-    loadUserData();
-    // 起動時にすべてのCSVを読み込む
-    await Promise.all([
-        loadCSV('30', 'Eiken_30.csv'),
-        loadCSV('25', 'Eiken_25.csv'),
-        loadCSV('20', 'Eiken_20.csv')
-    ]);
-};
+    <div id="screen-title" class="screen active">
+        <h1>英単語学習</h1>
+        <button class="main-btn bg-30" onclick="startSession('30')">英検 3 級</button>
+        <button class="main-btn bg-25" onclick="startSession('25')">英検 準 2 級</button>
+        <button class="main-btn bg-20" onclick="startSession('20')">英検 2 級</button>
+        <button class="list-btn" onclick="showMasteredList()">覚えたリスト</button>
+        <label style="margin-top:20px; color:#888;"><input type="checkbox" id="speech-toggle" checked> 音声読み上げ</label>
+    </div>
 
-async function loadCSV(gradeKey, fileName) {
-    try {
+    <div id="screen-quiz" class="screen">
+        <div id="card-container">
+            <div class="card" id="card-face">
+                <div class="en-text" id="q-en"></div>
+                <div class="cat-text" id="q-cat"></div>
+                <div class="hint-text" id="hint-msg">タップして意味を表示</div>
+                <div class="ja-text" id="q-ja"></div>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="action-btn btn-check" onclick="handleAnswer(false)">まだ...</button>
+            <button class="action-btn btn-master" onclick="handleAnswer(true)">覚えた！</button>
+        </div>
+    </div>
+
+    <div id="screen-result" class="screen">
+        <h2>お疲れ様でした</h2>
+        <button class="main-btn bg-30" onclick="goHome()">タイトルへ</button>
+    </div>
+
+    <div id="screen-list" class="screen" style="justify-content: flex-start; background: white;">
+        <h2 style="padding: 20px;">覚えた単語</h2>
+        <div id="mastered-list"></div>
+        <button class="list-btn" onclick="goHome()" style="margin: 20px;">戻る</button>
+    </div>
+
+<script>
+    let myData = {}; 
+    let sessionQueue = []; 
+    let currentWordIndex = 0;
+    let isAnswerShown = false;
+    let selectedGrade = '30';
+    const GRADE_DATA = { '30': [], '25': [], '20': [] };
+
+    window.onload = async function() {
+        loadUserData();
+        try {
+            await Promise.all([
+                loadCSV('30', 'Eiken_30.csv'),
+                loadCSV('25', 'Eiken_25.csv'),
+                loadCSV('20', 'Eiken_20.csv')
+            ]);
+            document.getElementById('loading').style.display = 'none';
+        } catch (e) {
+            alert("CSVの読み込みに失敗しました。GitHubの設定を確認してください。");
+        }
+    };
+
+    async function loadCSV(gradeKey, fileName) {
         const response = await fetch(fileName);
+        if (!response.ok) throw new Error();
         const text = await response.text();
-        const lines = text.trim().split('\n');
+        const lines = text.trim().split(/\r?\n/); // 改行コードの差異を吸収
         GRADE_DATA[gradeKey] = lines.map(line => {
-            const [id, en, ja, cat] = line.split(',').map(s => s.trim());
-            return { id: parseInt(id), en, ja, cat };
-        });
-    } catch (e) {
-        console.error(`${fileName} の読み込みに失敗しました:`, e);
+            const parts = line.split(',');
+            if (parts.length < 3) return null;
+            const [id, en, ja, cat] = parts.map(s => s.trim());
+            return { id: parseInt(id), en, ja, cat: cat || "" };
+        }).filter(item => item !== null);
     }
-}
 
-function startSession(grade) {
-    selectedGrade = grade;
-    const targetList = GRADE_DATA[grade];
-    // ... (以下の学習ロジックは以前のHTML全体生成時と同じ)
-}
+    function loadUserData() {
+        const saved = localStorage.getItem('eiken_discovery_vGitHub');
+        if (saved) { myData = JSON.parse(saved); }
+    }
+
+    function saveData() {
+        localStorage.setItem('eiken_discovery_vGitHub', JSON.stringify(myData));
+    }
+
+    function startSession(grade) {
+        selectedGrade = grade;
+        const targetList = GRADE_DATA[grade];
+        if (!targetList || targetList.length === 0) { alert("データが空です"); return; }
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        let reviewList = [];
+        let newList = [];
+
+        targetList.forEach(word => {
+            const u = myData[word.id];
+            if (!u || u.level === 0) { newList.push(word); } 
+            else if (u.level === 3) { return; }
+            else if (u.nextDate <= todayStr) { reviewList.push(word); }
+        });
+
+        sessionQueue = [...reviewList.sort(() => Math.random() - 0.5).slice(0, 5), 
+                        ...newList.sort(() => Math.random() - 0.5).slice(0, 10)];
+
+        if (sessionQueue.length === 0) { alert("学習する単語がありません"); return; }
+        currentWordIndex = 0;
+        changeScreen('screen-quiz');
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const word = sessionQueue[currentWordIndex];
+        isAnswerShown = false;
+        document.getElementById('q-en').textContent = word.en;
+        document.getElementById('q-cat').textContent = word.cat ? `[${word.cat}]` : '';
+        document.getElementById('q-ja').textContent = word.ja;
+        document.getElementById('q-ja').style.display = 'none';
+        document.getElementById('hint-msg').style.display = 'block';
+        if (document.getElementById('speech-toggle').checked) { speak(word.en); }
+    }
+
+    document.getElementById('card-face').onclick = () => {
+        if(!isAnswerShown) {
+            document.getElementById('q-ja').style.display = 'block';
+            document.getElementById('hint-msg').style.display = 'none';
+            isAnswerShown = true;
+        }
+    };
+
+    function handleAnswer(isRemembered) {
+        const word = sessionQueue[currentWordIndex];
+        const u = myData[word.id] || { level: 0 };
+        if (isRemembered) {
+            let nextLv = u.level + 1;
+            let days = nextLv === 1 ? 1 : 7;
+            myData[word.id] = nextLv >= 3 ? { level: 3, nextDate: null } : { level: nextLv, nextDate: addDays(days) };
+        } else {
+            myData[word.id] = { level: 0, nextDate: addDays(0) };
+            sessionQueue.push(word);
+        }
+        saveData();
+        currentWordIndex++;
+        if (currentWordIndex < sessionQueue.length) { showQuestion(); } else { changeScreen('screen-result'); }
+    }
+
+    function addDays(days) {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+    }
+
+    function showMasteredList() {
+        const container = document.getElementById('mastered-list');
+        container.innerHTML = '';
+        Object.values(GRADE_DATA).flat().forEach(word => {
+            const u = myData[word.id];
+            if (u && u.level === 3) {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `<span><b>${word.en}</b></span> <span>${word.ja}</span>`;
+                container.appendChild(div);
+            }
+        });
+        changeScreen('screen-list');
+    }
+
+    function changeScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function goHome() { changeScreen('screen-title'); }
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const uttr = new SpeechSynthesisUtterance(text);
+        uttr.lang = 'en-US';
+        window.speechSynthesis.speak(uttr);
+    }
+</script>
+</body>
+</html>
