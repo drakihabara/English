@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>英検単語学習 GitHub版</title>
     <style>
-        /* 基本スタイル（以前のものを継承・最適化） */
         body, button, .card { font-family: sans-serif; touch-action: manipulation; user-select: none; }
         body { background-color: #f0f2f5; margin: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; color: #333; }
         .screen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; position: absolute; }
@@ -57,12 +56,13 @@
     </div>
 
     <div id="screen-result" class="screen">
-        <h2>お疲れ様でした</h2>
-        <button class="main-btn bg-30" onclick="goHome()">タイトルへ</button>
+        <h2 id="result-msg">10問クリア！</h2>
+        <button class="main-btn bg-30" id="btn-continue" onclick="startSession(selectedGrade)">つづける</button>
+        <div style="margin-top:20px; color:#888; cursor:pointer; text-decoration:underline;" onclick="goHome()">タイトルへ戻る</div>
     </div>
 
     <div id="screen-list" class="screen" style="justify-content: flex-start; background: white;">
-        <h2 style="padding: 20px;">覚えた単語</h2>
+        <h2 style="padding: 20px;">覚えたリスト</h2>
         <div id="mastered-list"></div>
         <button class="list-btn" onclick="goHome()" style="margin: 20px;">戻る</button>
     </div>
@@ -85,7 +85,7 @@
             ]);
             document.getElementById('loading').style.display = 'none';
         } catch (e) {
-            alert("CSVの読み込みに失敗しました。GitHubの設定を確認してください。");
+            alert("CSVの読み込みに失敗しました。");
         }
     };
 
@@ -93,7 +93,7 @@
         const response = await fetch(fileName);
         if (!response.ok) throw new Error();
         const text = await response.text();
-        const lines = text.trim().split(/\r?\n/); // 改行コードの差異を吸収
+        const lines = text.trim().split(/\r?\n/);
         GRADE_DATA[gradeKey] = lines.map(line => {
             const parts = line.split(',');
             if (parts.length < 3) return null;
@@ -114,23 +114,38 @@
     function startSession(grade) {
         selectedGrade = grade;
         const targetList = GRADE_DATA[grade];
-        if (!targetList || targetList.length === 0) { alert("データが空です"); return; }
+        
+        // ボタンの色を現在の級に合わせる
+        const contBtn = document.getElementById('btn-continue');
+        contBtn.className = `main-btn bg-${grade}`;
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        let reviewList = [];
-        let newList = [];
-
+        let pool0 = [], pool1 = [], pool2 = [];
         targetList.forEach(word => {
             const u = myData[word.id];
-            if (!u || u.level === 0) { newList.push(word); } 
-            else if (u.level === 3) { return; }
-            else if (u.nextDate <= todayStr) { reviewList.push(word); }
+            if (!u || u.level === 0) pool0.push(word);
+            else if (u.level === 1) pool1.push(word);
+            else if (u.level === 2) pool2.push(word);
         });
 
-        sessionQueue = [...reviewList.sort(() => Math.random() - 0.5).slice(0, 5), 
-                        ...newList.sort(() => Math.random() - 0.5).slice(0, 10)];
+        // シャッフル
+        [pool0, pool1, pool2].forEach(p => p.sort(() => Math.random() - 0.5));
 
-        if (sessionQueue.length === 0) { alert("学習する単語がありません"); return; }
+        let picked = [];
+        // 1-7問目: level0
+        picked = picked.concat(pool0.splice(0, 7));
+        // 8-9問目: level1 (足りなきゃ0から)
+        let p1 = pool1.splice(0, 2);
+        while(p1.length < 2 && pool0.length > 0) p1.push(pool0.shift());
+        picked = picked.concat(p1);
+        // 10問目: level2 (足りなきゃ1, 0から)
+        let p2 = pool2.splice(0, 1);
+        if(p2.length < 1 && pool1.length > 0) p2.push(pool1.shift());
+        if(p2.length < 1 && pool0.length > 0) p2.push(pool0.shift());
+        picked = picked.concat(p2);
+
+        sessionQueue = picked.filter(n => n); // undefined除外
+        if (sessionQueue.length === 0) { alert("マスター完了！"); goHome(); return; }
+        
         currentWordIndex = 0;
         changeScreen('screen-quiz');
         showQuestion();
@@ -159,36 +174,35 @@
         const word = sessionQueue[currentWordIndex];
         const u = myData[word.id] || { level: 0 };
         if (isRemembered) {
-            let nextLv = u.level + 1;
-            let days = nextLv === 1 ? 1 : 7;
-            myData[word.id] = nextLv >= 3 ? { level: 3, nextDate: null } : { level: nextLv, nextDate: addDays(days) };
+            myData[word.id] = { level: u.level + 1 };
         } else {
-            myData[word.id] = { level: 0, nextDate: addDays(0) };
+            myData[word.id] = { level: 0 };
             sessionQueue.push(word);
         }
         saveData();
         currentWordIndex++;
-        if (currentWordIndex < sessionQueue.length) { showQuestion(); } else { changeScreen('screen-result'); }
-    }
-
-    function addDays(days) {
-        const d = new Date();
-        d.setDate(d.getDate() + days);
-        return d.toISOString().split('T')[0];
+        if (currentWordIndex < sessionQueue.length) { 
+            showQuestion(); 
+        } else { 
+            changeScreen('screen-result'); 
+        }
     }
 
     function showMasteredList() {
         const container = document.getElementById('mastered-list');
         container.innerHTML = '';
+        let count = 0;
         Object.values(GRADE_DATA).flat().forEach(word => {
             const u = myData[word.id];
-            if (u && u.level === 3) {
+            if (u && u.level >= 3) {
+                count++;
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 div.innerHTML = `<span><b>${word.en}</b></span> <span>${word.ja}</span>`;
                 container.appendChild(div);
             }
         });
+        if(count === 0) container.innerHTML = '<p style="text-align:center; color:#ccc;">まだありません</p>';
         changeScreen('screen-list');
     }
 
