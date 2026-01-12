@@ -2,19 +2,27 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>英検単語学習マスター</title>
     <style>
         /* --- 基本設定 & iPhone 17 Pro 最適化 --- */
+        :root {
+            --primary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --bg-color: #f0f2f5;
+        }
+
         body, button, .card {
-            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             touch-action: manipulation;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background-color: #f0f2f5;
+            background-color: var(--bg-color);
             margin: 0;
             height: 100vh;
             display: flex;
@@ -35,46 +43,52 @@
             height: 100%;
             position: absolute;
             top: 0; left: 0;
+            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
         }
         .active { display: flex; }
 
         /* --- カードデザイン --- */
         #card-container {
             width: 340px; height: 420px; margin-bottom: 25px;
+            perspective: 1000px;
         }
         .card {
             width: 100%; height: 100%;
-            background: white; border-radius: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: white; border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
             text-align: center; cursor: pointer;
+            transition: transform 0.2s;
         }
+        .card:active { transform: scale(0.98); }
 
-        .en-text { font-size: 46px; font-weight: bold; margin-bottom: 10px; padding: 0 15px; word-break: break-all; }
+        .en-text { font-size: 44px; font-weight: bold; margin-bottom: 10px; padding: 0 20px; word-break: break-word; }
         .cat-text { font-size: 16px; color: #888; margin-bottom: 40px; }
-        .ja-text { font-size: 30px; font-weight: bold; color: #e74c3c; display: none; }
+        .ja-text { font-size: 32px; font-weight: bold; color: var(--danger-color); display: none; padding: 0 20px; }
         .hint-text { font-size: 16px; color: #bbb; }
 
         /* --- 操作ボタン --- */
         .controls { width: 340px; display: flex; gap: 15px; }
         .action-btn {
-            flex: 1; height: 70px; border-radius: 35px; font-size: 20px;
+            flex: 1; height: 75px; border-radius: 38px; font-size: 20px;
             border: none; font-weight: bold; color: white; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            transition: opacity 0.1s;
         }
-        .btn-check { background-color: #f39c12; }
-        .btn-master { background-color: #27ae60; }
+        .action-btn:active { opacity: 0.8; }
+        .btn-check { background-color: var(--warning-color); }
+        .btn-master { background-color: var(--success-color); }
 
         /* --- メニューボタン --- */
         .main-btn {
-            width: 280px; padding: 18px 0; border-radius: 35px; font-size: 20px;
-            margin-bottom: 12px; border: none; color: white; font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 280px; padding: 20px 0; border-radius: 35px; font-size: 20px;
+            margin-bottom: 15px; border: none; color: white; font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .bg-30 { background: #3498db; }
+        .bg-30 { background: var(--primary-color); }
         .bg-25 { background: #e67e22; }
-        .bg-20 { background: #2ecc71; }
+        .bg-20 { background: var(--success-color); }
         
         .list-btn {
             width: 280px; padding: 15px 0; border-radius: 35px;
@@ -82,43 +96,49 @@
             margin-top: 15px; cursor: pointer;
         }
 
-        /* --- 覚えたリスト（文字サイズ拡大版） --- */
-        #mastered-list { width: 100%; max-width: 600px; overflow-y: auto; flex: 1; background: white; }
+        /* --- リスト画面 --- */
+        #mastered-list { width: 100%; overflow-y: auto; flex: 1; background: white; }
         .list-item {
-            padding: 22px 25px;
+            padding: 20px 25px;
             border-bottom: 1px solid #f0f0f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .list-en { font-size: 26px; font-weight: bold; color: #333; }
-        .list-ja { font-size: 20px; color: #666; margin-left: 15px; text-align: right; }
+        .list-en { font-size: 24px; font-weight: bold; color: #333; }
+        .list-ja { font-size: 18px; color: #666; text-align: right; }
 
         .loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; display: flex; justify-content: center; align-items: center; z-index: 100;
+            background: white; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 100;
         }
     </style>
 </head>
 <body>
 
-    <div id="loading" class="loading-overlay">データを読み込み中...</div>
+    <div id="loading" class="loading-overlay">
+        <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">英検マスター</div>
+        <div>データを読み込み中...</div>
+    </div>
 
     <div id="screen-title" class="screen active">
-        <h1 style="font-size: 32px; margin-bottom: 30px;">英単語学習</h1>
+        <h1 style="font-size: 36px; margin-bottom: 40px;">英単語学習</h1>
         <button class="main-btn bg-30" onclick="startSession('30')">英検 3 級</button>
         <button class="main-btn bg-25" onclick="startSession('25')">英検 準 2 級</button>
         <button class="main-btn bg-20" onclick="startSession('20')">英検 2 級</button>
         <button class="list-btn" onclick="showMasteredList()">覚えたリスト</button>
-        <label style="margin-top:25px; color:#888; font-size: 16px;">
-            <input type="checkbox" id="speech-toggle" checked> 音声読み上げ
+        
+        <label style="margin-top:30px; color:#666; font-size: 18px; display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="speech-toggle" checked style="transform: scale(1.5);"> 音声読み上げ
         </label>
-        <div style="position: absolute; bottom: 30px; font-size: 12px; color: #ccc; cursor: pointer;" onclick="resetData()">学習リセット</div>
+        
+        <div style="position: absolute; bottom: 50px; font-size: 14px; color: #bbb; cursor: pointer; text-decoration: underline;" onclick="resetData()">
+            学習データをリセット
+        </div>
     </div>
 
     <div id="screen-quiz" class="screen">
         <div id="card-container">
-            <div class="card" id="card-face">
+            <div class="card" id="card-face" onclick="revealAnswer()">
                 <div class="en-text" id="q-en"></div>
                 <div class="cat-text" id="q-cat"></div>
                 <div class="hint-text" id="hint-msg">タップして意味を表示</div>
@@ -132,18 +152,19 @@
     </div>
 
     <div id="screen-result" class="screen">
-        <h2 style="font-size: 30px; margin-bottom: 40px;">10問クリア！</h2>
+        <div style="font-size: 80px; margin-bottom: 20px;">🎉</div>
+        <h2 style="font-size: 32px; margin-bottom: 40px;">10問クリア！</h2>
         <button class="main-btn" id="btn-continue" onclick="startSession(selectedGrade)">つづける</button>
-        <div style="margin-top:30px; color:#3498db; font-weight:bold; cursor:pointer;" onclick="goHome()">タイトルへ</div>
+        <div style="margin-top:30px; color:var(--primary-color); font-weight:bold; cursor:pointer; font-size: 18px;" onclick="goHome()">タイトルに戻る</div>
     </div>
 
     <div id="screen-list" class="screen" style="justify-content: flex-start; background: white;">
         <div style="width: 100%; padding: 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
             <h2 style="margin:0; font-size: 24px;">覚えた単語</h2>
-            <div id="master-count" style="font-weight:bold; color:#27ae60; font-size: 20px;">0語</div>
+            <div id="master-count" style="font-weight:bold; color:var(--success-color); font-size: 22px;">0語</div>
         </div>
         <div id="mastered-list"></div>
-        <button class="list-btn" onclick="goHome()" style="margin: 25px;">戻る</button>
+        <button class="list-btn" onclick="goHome()" style="margin: 25px; width: calc(100% - 50px);">戻る</button>
     </div>
 
 <script>
@@ -157,7 +178,6 @@
     window.onload = async function() {
         loadUserData();
         try {
-            // 全CSVを並列読み込み
             await Promise.all([
                 loadCSV('30', 'Eiken_30.csv'),
                 loadCSV('25', 'Eiken_25.csv'),
@@ -165,29 +185,48 @@
             ]);
             document.getElementById('loading').style.display = 'none';
         } catch (e) {
-            alert("CSV読み込み失敗。GitHubのファイル名を確認してください。");
+            console.error(e);
+            alert("CSVデータの読み込みに失敗しました。ファイル名と配置場所を確認してください。");
         }
     };
 
     async function loadCSV(gradeKey, fileName) {
         const res = await fetch(fileName);
-        if (!res.ok) throw new Error();
+        if (!res.ok) throw new Error(`${fileName} not found`);
         const text = await res.text();
         const lines = text.trim().split(/\r?\n/);
-        GRADE_DATA[gradeKey] = lines.map(line => {
+        
+        GRADE_DATA[gradeKey] = lines.map((line, index) => {
+            // カンマを含む日本語訳に対応するため、簡易的なパース処理
             const p = line.split(',');
             if (p.length < 3) return null;
-            return { id: parseInt(p[0]), en: p[1].trim(), ja: p[2].trim(), cat: p[3] ? p[3].trim() : "" };
+            return { 
+                id: p[0].trim() || `idx_${index}`, // IDがない場合のフォールバック
+                en: p[1].trim(), 
+                ja: p[2].trim(), 
+                cat: p[3] ? p[3].trim() : "" 
+            };
         }).filter(v => v);
     }
 
     function loadUserData() {
         const saved = localStorage.getItem('eiken_pro_v1');
-        if (saved) myData = JSON.parse(saved);
+        if (saved) {
+            try {
+                myData = JSON.parse(saved);
+            } catch(e) {
+                myData = {};
+            }
+        }
     }
 
     function saveData() {
         localStorage.setItem('eiken_pro_v1', JSON.stringify(myData));
+    }
+
+    // 複合キー生成（級をまたぐID重複対策）
+    function getWordKey(grade, id) {
+        return `${grade}_${id}`;
     }
 
     function startSession(grade) {
@@ -196,13 +235,13 @@
         if (!targetList || targetList.length === 0) return;
 
         // ボタン色を同期
-        const contBtn = document.getElementById('btn-continue');
-        contBtn.className = `main-btn bg-${grade}`;
+        document.getElementById('btn-continue').className = `main-btn bg-${grade}`;
 
-        // プール分け（待ち時間なし）
+        // プール分け
         let p0 = [], p1 = [], p2 = [];
         targetList.forEach(w => {
-            const u = myData[w.id];
+            const key = getWordKey(grade, w.id);
+            const u = myData[key];
             if (!u || u.level === 0) p0.push(w);
             else if (u.level === 1) p1.push(w);
             else if (u.level === 2) p2.push(w);
@@ -210,21 +249,24 @@
 
         [p0, p1, p2].forEach(p => p.sort(() => Math.random() - 0.5));
 
-        // 10問の構成 (7:2:1)
+        // 10問の構成 (未習得優先)
         let picked = [];
-        picked = picked.concat(p0.splice(0, 7)); // 1-7問目
-
-        let slot1 = p1.splice(0, 2); // 8-9問目
+        picked = picked.concat(p0.splice(0, 7)); 
+        
+        let slot1 = p1.splice(0, 2);
         while(slot1.length < 2 && p0.length > 0) slot1.push(p0.shift());
         picked = picked.concat(slot1);
 
-        let slot2 = p2.splice(0, 1); // 10問目
+        let slot2 = p2.splice(0, 1);
         if(slot2.length < 1 && p1.length > 0) slot2.push(p1.shift());
         if(slot2.length < 1 && p0.length > 0) slot2.push(p0.shift());
         picked = picked.concat(slot2);
 
         sessionQueue = picked.filter(v => v);
-        if (sessionQueue.length === 0) { alert("全てマスターしました！"); return; }
+        if (sessionQueue.length === 0) { 
+            alert("この級の全単語をマスターしました！"); 
+            return; 
+        }
         
         currentWordIndex = 0;
         changeScreen('screen-quiz');
@@ -234,33 +276,45 @@
     function showQuestion() {
         const word = sessionQueue[currentWordIndex];
         isAnswerShown = false;
-        document.getElementById('q-en').textContent = word.en;
+        
+        const enEl = document.getElementById('q-en');
+        // 文字数に応じてフォントサイズを微調整
+        enEl.style.fontSize = word.en.length > 15 ? '32px' : '44px';
+        enEl.textContent = word.en;
+        
         document.getElementById('q-cat').textContent = word.cat ? `[${word.cat}]` : '';
         document.getElementById('q-ja').textContent = word.ja;
         document.getElementById('q-ja').style.display = 'none';
         document.getElementById('hint-msg').style.display = 'block';
+        
         if (document.getElementById('speech-toggle').checked) speak(word.en);
     }
 
-    document.getElementById('card-face').onclick = () => {
+    function revealAnswer() {
         if(!isAnswerShown) {
             document.getElementById('q-ja').style.display = 'block';
             document.getElementById('hint-msg').style.display = 'none';
             isAnswerShown = true;
         }
-    };
+    }
 
-    function handleAnswer(isRem) {
+    function handleAnswer(isCorrect) {
         const word = sessionQueue[currentWordIndex];
-        const u = myData[word.id] || { level: 0 };
-        if (isRem) {
-            myData[word.id] = { level: u.level + 1 };
+        const key = getWordKey(selectedGrade, word.id);
+        const u = myData[key] || { level: 0 };
+
+        if (isCorrect) {
+            // レベル3で「マスター」とし、最大4まで保持
+            myData[key] = { level: Math.min((u.level || 0) + 1, 4) };
         } else {
-            myData[word.id] = { level: 0 };
+            // 間違えたらレベルをリセットし、今回のセッションの最後に再出題
+            myData[key] = { level: 0 };
             sessionQueue.push(word);
         }
+        
         saveData();
         currentWordIndex++;
+        
         if (currentWordIndex < sessionQueue.length) {
             showQuestion();
         } else {
@@ -272,18 +326,28 @@
         const container = document.getElementById('mastered-list');
         container.innerHTML = '';
         let count = 0;
-        Object.values(GRADE_DATA).flat().forEach(w => {
-            const u = myData[w.id];
-            if (u && u.level >= 3) {
-                count++;
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                div.innerHTML = `<span class="list-en">${w.en}</span><span class="list-ja">${w.ja}</span>`;
-                container.appendChild(div);
-            }
+
+        Object.keys(GRADE_DATA).forEach(grade => {
+            GRADE_DATA[grade].forEach(w => {
+                const key = getWordKey(grade, w.id);
+                const u = myData[key];
+                if (u && u.level >= 3) {
+                    count++;
+                    const div = document.createElement('div');
+                    div.className = 'list-item';
+                    div.innerHTML = `
+                        <div class="list-en">${w.en}</div>
+                        <div class="list-ja">${w.ja}</div>
+                    `;
+                    container.appendChild(div);
+                }
+            });
         });
+
         document.getElementById('master-count').textContent = count + "語";
-        if(count === 0) container.innerHTML = '<p style="text-align:center; padding:50px; color:#ccc;">まだありません</p>';
+        if(count === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:100px 20px; color:#ccc; font-size:18px;">マスターした単語はまだありません。<br>「覚えた！」を3回繰り返すとここに追加されます。</p>';
+        }
         changeScreen('screen-list');
     }
 
@@ -298,11 +362,12 @@
         window.speechSynthesis.cancel();
         const uttr = new SpeechSynthesisUtterance(text);
         uttr.lang = 'en-US';
+        uttr.rate = 0.9; // 少しゆっくりめに再生
         window.speechSynthesis.speak(uttr);
     }
 
     function resetData() {
-        if(confirm("学習記録を完全に消去しますか？")) {
+        if(confirm("これまでの学習記録（マスターした単語など）をすべて消去しますか？")) {
             localStorage.removeItem('eiken_pro_v1');
             location.reload();
         }
